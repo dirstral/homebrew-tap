@@ -16,13 +16,13 @@ jobs:
 
       - name: Tap local checkout
         run: |
-          brew tap --overwrite dirstral/tap "$GITHUB_WORKSPACE"
+          brew tap dirstral/tap "$GITHUB_WORKSPACE"
 
       - name: Audit formulas
         run: |
-          brew audit --strict dir2mcp
-          brew audit --strict dir2mcp-full
-          brew audit --strict dirstral
+          brew audit --strict dirstral/tap/dir2mcp
+          brew audit --strict dirstral/tap/dir2mcp-full
+          brew audit --strict dirstral/tap/dirstral
 
   install-macos:
     strategy:
@@ -39,11 +39,11 @@ jobs:
 
       - name: Tap local checkout
         run: |
-          brew tap --overwrite dirstral/tap "$GITHUB_WORKSPACE"
+          brew tap dirstral/tap "$GITHUB_WORKSPACE"
 
       - name: Install formula
         run: |
-          brew install "${{ matrix.formula }}"
+          brew install "dirstral/tap/${{ matrix.formula }}"
 
       - name: Smoke version
         run: |
@@ -69,11 +69,11 @@ jobs:
 
       - name: Tap local checkout
         run: |
-          brew tap --overwrite dirstral/tap "$GITHUB_WORKSPACE"
+          brew tap dirstral/tap "$GITHUB_WORKSPACE"
 
       - name: Install formula
         run: |
-          brew install "${{ matrix.formula }}"
+          brew install "dirstral/tap/${{ matrix.formula }}"
 
       - name: Smoke version
         run: |

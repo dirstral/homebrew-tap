@@ -20,6 +20,8 @@ Install the full runtime with bundled Docling dependencies:
 brew install dir2mcp-full
 ```
 
+`dir2mcp` and `dir2mcp-full` conflict in Homebrew and cannot be installed at the same time.
+
 Install the interactive TUI client:
 
 ```sh

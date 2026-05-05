@@ -57,7 +57,8 @@ class Dir2mcpFull < Formula
   end
 
   def install_docling_runtime
-    venv = virtualenv_create(libexec/"docling-venv", "python3.12")
+    python = Formula["python@3.12"].opt_bin/"python3.12"
+    venv = virtualenv_create(libexec/"docling-venv", python)
     venv.pip_install "docling==#{DOCLING_VERSION}"
 
     docling_bin = libexec/"docling-venv/bin/docling"

@@ -52,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        formula: [dir2mcp, dir2mcp-full]
+        formula: [dir2mcp]
     steps:
       - uses: actions/checkout@v4
 

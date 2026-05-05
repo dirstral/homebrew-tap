@@ -14,11 +14,14 @@ jobs:
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
 
-      - name: Audit formulas
+      - name: Tap local checkout
         run: |
-          brew audit --strict --formula ./Formula/dir2mcp.rb
-          brew audit --strict --formula ./Formula/dir2mcp-full.rb
-          brew audit --strict --formula ./Formula/dirstral.rb
+          brew untap dirstral/tap || true
+          brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+
+      - name: Audit formula
+        run: |
+          brew audit --strict dirstral/tap/dir2mcp-full
 
   install-macos:
     strategy:
@@ -33,9 +36,14 @@ jobs:
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
 
+      - name: Tap local checkout
+        run: |
+          brew untap dirstral/tap || true
+          brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+
       - name: Install formula
         run: |
-          brew install --formula "./Formula/${{ matrix.formula }}.rb"
+          brew install --formula "dirstral/tap/${{ matrix.formula }}"
 
       - name: Smoke version
         run: |
@@ -59,9 +67,14 @@ jobs:
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
 
+      - name: Tap local checkout
+        run: |
+          brew untap dirstral/tap || true
+          brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+
       - name: Install formula
         run: |
-          brew install --formula "./Formula/${{ matrix.formula }}.rb"
+          brew install --formula "dirstral/tap/${{ matrix.formula }}"
 
       - name: Smoke version
         run: |

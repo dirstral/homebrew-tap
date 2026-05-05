@@ -1,11 +1,7 @@
 # typed: false
 # frozen_string_literal: true
 
-require "language/python/virtualenv"
-
 class Dir2mcpFull < Formula
-  include Language::Python::Virtualenv
-
   desc "Deploy any local directory as an MCP knowledge server with bundled Docling runtime"
   homepage "https://github.com/Dirstral/dir2mcp"
   version "0.4.0"
@@ -58,10 +54,13 @@ class Dir2mcpFull < Formula
 
   def install_docling_runtime
     python = Formula["python@3.12"].opt_bin/"python3.12"
-    venv = virtualenv_create(libexec/"docling-venv", python)
-    venv.pip_install "docling==#{DOCLING_VERSION}"
+    venv_dir = libexec/"docling-venv"
+    system python, "-m", "venv", venv_dir
+    pip = venv_dir/"bin/pip"
+    system pip, "install", "--upgrade", "pip"
+    system pip, "install", "docling==#{DOCLING_VERSION}"
 
-    docling_bin = libexec/"docling-venv/bin/docling"
+    docling_bin = venv_dir/"bin/docling"
     real_bin = libexec/"dir2mcp"
     bin.write_env_script real_bin, DIR2MCP_DOCLING_COMMAND: docling_bin
     (bin/"dir2mcp-full").write_env_script real_bin, DIR2MCP_DOCLING_COMMAND: docling_bin

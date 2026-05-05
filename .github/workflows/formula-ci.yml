@@ -1,0 +1,80 @@
+name: Formula CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Tap local checkout
+        run: |
+          brew tap --overwrite dirstral/tap "$GITHUB_WORKSPACE"
+
+      - name: Audit formulas
+        run: |
+          brew audit --strict dir2mcp
+          brew audit --strict dir2mcp-full
+          brew audit --strict dirstral
+
+  install-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-13, macos-14]
+        formula: [dir2mcp, dir2mcp-full]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Tap local checkout
+        run: |
+          brew tap --overwrite dirstral/tap "$GITHUB_WORKSPACE"
+
+      - name: Install formula
+        run: |
+          brew install "${{ matrix.formula }}"
+
+      - name: Smoke version
+        run: |
+          dir2mcp version
+
+      - name: Docling smoke (full only)
+        if: matrix.formula == 'dir2mcp-full'
+        run: |
+          command -v docling || true
+          dir2mcp version
+
+  install-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        formula: [dir2mcp, dir2mcp-full]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Tap local checkout
+        run: |
+          brew tap --overwrite dirstral/tap "$GITHUB_WORKSPACE"
+
+      - name: Install formula
+        run: |
+          brew install "${{ matrix.formula }}"
+
+      - name: Smoke version
+        run: |
+          dir2mcp version

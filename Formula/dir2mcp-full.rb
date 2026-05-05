@@ -2,13 +2,12 @@
 # frozen_string_literal: true
 
 class Dir2mcpFull < Formula
-  desc "Deploy any local directory as an MCP knowledge server with bundled Docling runtime"
+  desc "Deploy local directories as an MCP server with bundled Docling runtime"
   homepage "https://github.com/Dirstral/dir2mcp"
   version "0.4.0"
   license "MIT"
 
   depends_on "python@3.12"
-  conflicts_with "dir2mcp", because: "both install a dir2mcp runtime variant"
 
   DOCLING_VERSION = "2.92.0"
 
@@ -51,6 +50,8 @@ class Dir2mcpFull < Formula
       end
     end
   end
+
+  conflicts_with "dir2mcp", because: "both install a dir2mcp runtime variant"
 
   def install_docling_runtime
     python = Formula["python@3.12"].opt_bin/"python3.12"

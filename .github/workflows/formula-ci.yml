@@ -17,7 +17,7 @@ jobs:
       - name: Tap local checkout
         run: |
           brew untap dirstral/tap || true
-          brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+          brew tap dirstral/tap "file://$GITHUB_WORKSPACE"
 
       - name: Audit formula
         run: |
@@ -39,7 +39,7 @@ jobs:
       - name: Tap local checkout
         run: |
           brew untap dirstral/tap || true
-          brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+          brew tap dirstral/tap "file://$GITHUB_WORKSPACE"
 
       - name: Install formula
         run: |
@@ -70,7 +70,7 @@ jobs:
       - name: Tap local checkout
         run: |
           brew untap dirstral/tap || true
-          brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+          brew tap dirstral/tap "file://$GITHUB_WORKSPACE"
 
       - name: Install formula
         run: |

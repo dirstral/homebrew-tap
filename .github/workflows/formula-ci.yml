@@ -26,7 +26,7 @@ jobs:
       - name: Cleanup tap
         if: ${{ always() }}
         run: |
-          brew uninstall --ignore-dependencies --formula "dirstral/tap/${{ matrix.formula }}" || true
+          brew uninstall --ignore-dependencies --formula "dir2mcp-full" || true
           brew untap dirstral/tap || true
 
   install-macos:
@@ -63,7 +63,7 @@ jobs:
       - name: Cleanup tap
         if: ${{ always() }}
         run: |
-          brew uninstall --ignore-dependencies --formula "dirstral/tap/${{ matrix.formula }}" || true
+          brew uninstall --ignore-dependencies --formula "${{ matrix.formula }}" || true
           brew untap dirstral/tap || true
   install-linux:
     runs-on: ubuntu-latest
@@ -98,4 +98,5 @@ jobs:
       - name: Cleanup tap
         if: ${{ always() }}
         run: |
+          brew uninstall --ignore-dependencies --formula "${{ matrix.formula }}" || true
           brew untap dirstral/tap || true

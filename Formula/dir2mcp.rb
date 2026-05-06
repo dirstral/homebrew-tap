@@ -44,6 +44,16 @@ class Dir2mcp < Formula
     end
   end
 
+  # IMPORTANT: This conflicts_with declaration was manually added and will be lost on regen.
+  # To persist this across regenerations, add the following to the GoReleaser config
+  # (.goreleaser.yml) in the upstream dirstral/dir2mcp repository under the brew section:
+  #
+  #   brews:
+  #     - name: dir2mcp
+  #       conflicts:
+  #         - dir2mcp-full
+  #
+  # See: https://goreleaser.com/customization/homebrew/#conflicts
   conflicts_with "dir2mcp-full", because: "both install a dir2mcp runtime variant"
 
   test do

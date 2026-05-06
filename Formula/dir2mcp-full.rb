@@ -60,7 +60,14 @@ class Dir2mcpFull < Formula
     system python, "-m", "venv", venv_dir
     pip = venv_dir/"bin/pip"
     system pip, "install", "--upgrade", "pip"
-    system pip, "install", "--prefer-binary", "docling==#{DOCLING_VERSION}"
+    if OS.mac? && Hardware::CPU.arm?
+      # ARM macOS linkage checks are stricter for some prebuilt wheels.
+      # Keep rpds/pydantic-core from source here to avoid broken install IDs.
+      system pip, "install", "--no-binary", "pydantic-core,rpds-py", "docling==#{DOCLING_VERSION}"
+    else
+      # Prefer wheels on Intel/Linux to reduce source-build failures and time.
+      system pip, "install", "--prefer-binary", "docling==#{DOCLING_VERSION}"
+    end
 
     docling_bin = opt_libexec/"docling-venv/bin/docling"
     real_bin = libexec/"dir2mcp"

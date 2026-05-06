@@ -52,9 +52,7 @@ jobs:
       - name: Docling smoke (full only)
         if: matrix.formula == 'dir2mcp-full'
         run: |
-          command -v docling || true
-          dir2mcp version
-
+          "$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling --help
   install-linux:
     runs-on: ubuntu-latest
     strategy:

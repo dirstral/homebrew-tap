@@ -8,6 +8,7 @@ class Dir2mcpFull < Formula
   license "MIT"
 
   depends_on "python@3.12"
+  depends_on "rust" => :build
 
   DOCLING_VERSION = "2.92.0"
 
@@ -59,7 +60,7 @@ class Dir2mcpFull < Formula
     system python, "-m", "venv", venv_dir
     pip = venv_dir/"bin/pip"
     system pip, "install", "--upgrade", "pip"
-    system pip, "install", "docling==#{DOCLING_VERSION}"
+    system pip, "install", "--no-binary", "pydantic-core", "docling==#{DOCLING_VERSION}"
 
     docling_bin = venv_dir/"bin/docling"
     real_bin = libexec/"dir2mcp"

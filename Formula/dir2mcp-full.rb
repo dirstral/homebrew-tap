@@ -63,7 +63,7 @@ class Dir2mcpFull < Formula
 
     docling_bin = venv_dir/"bin/docling"
     real_bin = libexec/"dir2mcp"
-    bin.write_env_script real_bin, DIR2MCP_DOCLING_COMMAND: docling_bin
+    (bin/"dir2mcp").write_env_script real_bin, DIR2MCP_DOCLING_COMMAND: docling_bin
     (bin/"dir2mcp-full").write_env_script real_bin, DIR2MCP_DOCLING_COMMAND: docling_bin
   end
 

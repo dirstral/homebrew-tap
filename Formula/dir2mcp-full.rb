@@ -3,8 +3,8 @@
 
 class Dir2mcpFull < Formula
   desc "Deploy local directories as an MCP server with bundled Docling runtime"
-  homepage "https://github.com/Dirstral/dir2mcp"
-  version "0.4.0"
+  homepage "https://github.com/dirstral/dir2mcp"
+  version "0.4.4"
   license "MIT"
 
   depends_on "rust" => :build
@@ -14,8 +14,8 @@ class Dir2mcpFull < Formula
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/Dirstral/dir2mcp/releases/download/v0.4.0/dir2mcp_0.4.0_darwin_amd64.tar.gz"
-      sha256 "aa0dbf69204976737a1c1d979b67edf154d13d21150a98d8b6c028e570d65e54"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.4.4/dir2mcp_0.4.4_darwin_amd64.tar.gz"
+      sha256 "598535e4123d64db5e905addf01904cfd11439257359c33118d0072daf39cc47"
 
       define_method(:install) do
         libexec.install "dir2mcp"
@@ -23,8 +23,8 @@ class Dir2mcpFull < Formula
       end
     end
     if Hardware::CPU.arm?
-      url "https://github.com/Dirstral/dir2mcp/releases/download/v0.4.0/dir2mcp_0.4.0_darwin_arm64.tar.gz"
-      sha256 "259d55a4ad6781a9cbde1215cfb9b35e2165de4413b2f8ed70a2eb65890404ed"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.4.4/dir2mcp_0.4.4_darwin_arm64.tar.gz"
+      sha256 "ad2dad129a776d3a22e9e85bbf2bc640f03f9bf7957c968e6976d769f82762c6"
 
       define_method(:install) do
         libexec.install "dir2mcp"
@@ -35,16 +35,16 @@ class Dir2mcpFull < Formula
 
   on_linux do
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
-      url "https://github.com/Dirstral/dir2mcp/releases/download/v0.4.0/dir2mcp_0.4.0_linux_amd64.tar.gz"
-      sha256 "8aebf5ab111f54c527b573bccd84a39762310100f54b4593e95e230ffda649ff"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.4.4/dir2mcp_0.4.4_linux_amd64.tar.gz"
+      sha256 "bfe6170788b7e6769f0520d4af806dc0b9a553fe0d87f1e9a5125b344de9cdba"
       define_method(:install) do
         libexec.install "dir2mcp"
         install_docling_runtime
       end
     end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/Dirstral/dir2mcp/releases/download/v0.4.0/dir2mcp_0.4.0_linux_arm64.tar.gz"
-      sha256 "8f2e9d41f2bad3b2a0fd2fa8b9686f1efa8d1256223b2a990b6d7769480815f4"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.4.4/dir2mcp_0.4.4_linux_arm64.tar.gz"
+      sha256 "ccdddce407bc348c0265b13ae00161086bd882d9147f7daac854f8430be049ef"
       define_method(:install) do
         libexec.install "dir2mcp"
         install_docling_runtime

@@ -44,6 +44,8 @@ class Dir2mcp < Formula
     end
   end
 
+  conflicts_with "dir2mcp-full", because: "both install a dir2mcp runtime variant"
+
   test do
     system "#{bin}/dir2mcp", "version"
   end

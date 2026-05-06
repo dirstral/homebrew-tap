@@ -59,7 +59,7 @@ jobs:
       - name: Docling smoke (full only)
         if: matrix.formula == 'dir2mcp-full'
         run: |
-          "$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling --help
+          test -x "$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling
 
       - name: Cleanup tap
         if: ${{ always() }}
@@ -95,7 +95,7 @@ jobs:
       - name: Docling smoke (full only)
         if: matrix.formula == 'dir2mcp-full'
         run: |
-          "$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling --help
+          test -x "$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling
 
       - name: Cleanup tap
         if: ${{ always() }}

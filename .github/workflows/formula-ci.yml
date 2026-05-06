@@ -1,0 +1,109 @@
+name: Formula CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+        continue-on-error: true
+
+      - name: Tap local checkout
+        run: |
+          brew untap dirstral/tap || true
+          brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+
+      - name: Audit formula
+        run: |
+          brew audit --strict dirstral/tap/dir2mcp-full
+
+      - name: Cleanup tap
+        if: ${{ always() }}
+        run: |
+          brew untap dirstral/tap || true
+
+  install-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15-intel
+            formula: dir2mcp
+          - os: macos-14
+            formula: dir2mcp
+          - os: macos-14
+            formula: dir2mcp-full
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+        continue-on-error: true
+
+      - name: Tap local checkout
+        run: |
+          brew untap dirstral/tap || true
+          brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+
+      - name: Install formula
+        run: |
+          brew install --formula "dirstral/tap/${{ matrix.formula }}"
+
+      - name: Smoke version
+        run: |
+          dir2mcp version
+
+      - name: Docling smoke (full only)
+        if: matrix.formula == 'dir2mcp-full'
+        run: |
+          test -x "$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling
+
+      - name: Cleanup tap
+        if: ${{ always() }}
+        run: |
+          brew uninstall --ignore-dependencies --formula "${{ matrix.formula }}" || true
+          brew untap dirstral/tap || true
+  install-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        formula: [dir2mcp, dir2mcp-full]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+        continue-on-error: true
+
+      - name: Tap local checkout
+        run: |
+          brew untap dirstral/tap || true
+          brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+
+      - name: Install formula
+        run: |
+          brew install --formula "dirstral/tap/${{ matrix.formula }}"
+
+      - name: Smoke version
+        run: |
+          dir2mcp version
+
+      - name: Docling smoke (full only)
+        if: matrix.formula == 'dir2mcp-full'
+        run: |
+          test -x "$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling
+
+      - name: Cleanup tap
+        if: ${{ always() }}
+        run: |
+          brew uninstall --ignore-dependencies --formula "${{ matrix.formula }}" || true
+          brew untap dirstral/tap || true

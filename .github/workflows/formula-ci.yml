@@ -23,6 +23,11 @@ jobs:
         run: |
           brew audit --strict dirstral/tap/dir2mcp-full
 
+      - name: Cleanup tap
+        if: ${{ always() }}
+        run: |
+          brew untap dirstral/tap || true
+
   install-macos:
     strategy:
       fail-fast: false
@@ -53,6 +58,11 @@ jobs:
         if: matrix.formula == 'dir2mcp-full'
         run: |
           "$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling --help
+
+      - name: Cleanup tap
+        if: ${{ always() }}
+        run: |
+          brew untap dirstral/tap || true
   install-linux:
     runs-on: ubuntu-latest
     strategy:
@@ -77,3 +87,8 @@ jobs:
       - name: Smoke version
         run: |
           dir2mcp version
+
+      - name: Cleanup tap
+        if: ${{ always() }}
+        run: |
+          brew untap dirstral/tap || true

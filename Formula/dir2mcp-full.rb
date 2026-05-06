@@ -60,7 +60,7 @@ class Dir2mcpFull < Formula
     system python, "-m", "venv", venv_dir
     pip = venv_dir/"bin/pip"
     system pip, "install", "--upgrade", "pip"
-    system pip, "install", "--no-binary", "pydantic-core,rpds-py", "docling==#{DOCLING_VERSION}"
+    system pip, "install", "--ignore-installed", "--no-binary", "pydantic-core,rpds-py", "docling==#{DOCLING_VERSION}"
 
     docling_bin = opt_libexec/"docling-venv/bin/docling"
     real_bin = libexec/"dir2mcp"

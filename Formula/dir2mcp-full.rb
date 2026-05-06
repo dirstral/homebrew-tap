@@ -63,7 +63,9 @@ class Dir2mcpFull < Formula
     if OS.mac? && Hardware::CPU.arm?
       # ARM macOS linkage checks are stricter for some prebuilt wheels.
       # Keep rpds/pydantic-core from source here to avoid broken install IDs.
-      system pip, "install", "--ignore-installed", "--no-binary", "pydantic-core,rpds-py", "docling==#{DOCLING_VERSION}"
+      system pip, "install", "--ignore-installed",
+             "--no-binary", "pydantic-core,rpds-py",
+             "docling==#{DOCLING_VERSION}"
     else
       # Prefer wheels on Intel/Linux to reduce source-build failures and time.
       system pip, "install", "--ignore-installed", "--prefer-binary", "docling==#{DOCLING_VERSION}"

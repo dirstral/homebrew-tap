@@ -72,6 +72,7 @@ class Dir2mcpFull < Formula
       system pip, "install", "--ignore-installed", "--prefer-binary", "docling==#{DOCLING_VERSION}"
     end
 
+    prune_problematic_cv2_dylibs!(venv_dir) if OS.mac?
     fix_torch_macos_rpath!(venv_dir) if OS.mac?
 
     docling_bin = opt_libexec/"docling-venv/bin/docling"
@@ -81,6 +82,15 @@ class Dir2mcpFull < Formula
   end
 
   private
+
+  def prune_problematic_cv2_dylibs!(venv_dir)
+    cv2_dylibs = venv_dir/"lib/python3.12/site-packages/cv2/.dylibs"
+    return unless cv2_dylibs.directory?
+
+    %w[libb2.1.dylib libtheoradec.1.dylib libtheoraenc.1.dylib].each do |name|
+      (cv2_dylibs/name).delete if (cv2_dylibs/name).exist?
+    end
+  end
 
   def fix_torch_macos_rpath!(venv_dir)
     site_packages = Pathname.glob(venv_dir/"lib/python*/site-packages").find(&:directory?)

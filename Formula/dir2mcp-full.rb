@@ -5,6 +5,7 @@ class Dir2mcpFull < Formula
   desc "Deploy local directories as an MCP server with bundled Docling runtime"
   homepage "https://github.com/dirstral/dir2mcp"
   version "0.4.4"
+  revision 1
   license "MIT"
 
   depends_on "rust" => :build
@@ -71,10 +72,33 @@ class Dir2mcpFull < Formula
       system pip, "install", "--ignore-installed", "--prefer-binary", "docling==#{DOCLING_VERSION}"
     end
 
+    fix_torch_macos_rpath!(venv_dir) if OS.mac?
+
     docling_bin = opt_libexec/"docling-venv/bin/docling"
     real_bin = libexec/"dir2mcp"
     (bin/"dir2mcp").write_env_script real_bin, DIR2MCP_DOCLING_COMMAND: docling_bin
     (bin/"dir2mcp-full").write_env_script real_bin, DIR2MCP_DOCLING_COMMAND: docling_bin
+  end
+
+  def fix_torch_macos_rpath!(venv_dir)
+    torch_lib = venv_dir/"lib/python3.12/site-packages/torch/lib"
+    return unless torch_lib.directory?
+
+    ids = {
+      "libc10.dylib" => "@rpath/libc10.dylib",
+      "libshm.dylib" => "@rpath/libshm.dylib",
+      "libtorch.dylib" => "@rpath/libtorch.dylib",
+      "libtorch_cpu.dylib" => "@rpath/libtorch_cpu.dylib",
+      "libtorch_global_deps.dylib" => "@rpath/libtorch_global_deps.dylib",
+      "libtorch_python.dylib" => "@rpath/libtorch_python.dylib",
+    }
+
+    ids.each do |name, id|
+      dylib = torch_lib/name
+      next unless dylib.exist?
+      system "install_name_tool", "-id", id, dylib
+      system "codesign", "--force", "--sign", "-", dylib
+    end
   end
 
   test do

@@ -81,7 +81,10 @@ class Dir2mcpFull < Formula
   end
 
   def fix_torch_macos_rpath!(venv_dir)
-    torch_lib = venv_dir/"lib/python3.12/site-packages/torch/lib"
+    site_packages = Pathname.glob(venv_dir/"lib/python*/site-packages").find(&:directory?)
+    return unless site_packages
+
+    torch_lib = site_packages/"torch/lib"
     return unless torch_lib.directory?
 
     ids = {

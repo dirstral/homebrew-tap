@@ -80,6 +80,8 @@ class Dir2mcpFull < Formula
     (bin/"dir2mcp-full").write_env_script real_bin, DIR2MCP_DOCLING_COMMAND: docling_bin
   end
 
+  private
+
   def fix_torch_macos_rpath!(venv_dir)
     site_packages = Pathname.glob(venv_dir/"lib/python*/site-packages").find(&:directory?)
     return unless site_packages
@@ -87,19 +89,12 @@ class Dir2mcpFull < Formula
     torch_lib = site_packages/"torch/lib"
     return unless torch_lib.directory?
 
-    ids = {
-      "libc10.dylib" => "@rpath/libc10.dylib",
-      "libshm.dylib" => "@rpath/libshm.dylib",
-      "libtorch.dylib" => "@rpath/libtorch.dylib",
-      "libtorch_cpu.dylib" => "@rpath/libtorch_cpu.dylib",
-      "libtorch_global_deps.dylib" => "@rpath/libtorch_global_deps.dylib",
-      "libtorch_python.dylib" => "@rpath/libtorch_python.dylib",
-    }
+    Pathname.glob(torch_lib/"*.dylib").each do |dylib|
+      rpath_id = "@rpath/#{dylib.basename}"
+      current_id = Utils.safe_popen_read("otool", "-D", dylib).lines[1]&.strip
+      next if current_id == rpath_id
 
-    ids.each do |name, id|
-      dylib = torch_lib/name
-      next unless dylib.exist?
-      system "install_name_tool", "-id", id, dylib
+      system "install_name_tool", "-id", rpath_id, dylib
       system "codesign", "--force", "--sign", "-", dylib
     end
   end

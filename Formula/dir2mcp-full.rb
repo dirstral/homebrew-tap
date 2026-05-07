@@ -5,8 +5,8 @@ class Dir2mcpFull < Formula
   desc "Deploy local directories as an MCP server with bundled Docling runtime"
   homepage "https://github.com/dirstral/dir2mcp"
   version "0.4.4"
-  revision 1
   license "MIT"
+  revision 1
 
   depends_on "rust" => :build
   depends_on "python@3.12"
@@ -104,7 +104,7 @@ class Dir2mcpFull < Formula
       current_id = Utils.safe_popen_read("otool", "-D", dylib).lines[1]&.strip
       next if current_id == rpath_id
 
-      system "install_name_tool", "-id", rpath_id, dylib
+      MachO::Tools.change_dylib_id(dylib.to_s, rpath_id)
       system "codesign", "--force", "--sign", "-", dylib
     end
   end

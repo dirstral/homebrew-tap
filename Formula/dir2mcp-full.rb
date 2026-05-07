@@ -6,6 +6,7 @@ class Dir2mcpFull < Formula
   homepage "https://github.com/dirstral/dir2mcp"
   version "0.4.4"
   license "MIT"
+  revision 1
 
   depends_on "rust" => :build
   depends_on "python@3.12"
@@ -71,10 +72,41 @@ class Dir2mcpFull < Formula
       system pip, "install", "--ignore-installed", "--prefer-binary", "docling==#{DOCLING_VERSION}"
     end
 
+    prune_problematic_cv2_dylibs!(venv_dir) if OS.mac?
+    fix_torch_macos_rpath!(venv_dir) if OS.mac?
+
     docling_bin = opt_libexec/"docling-venv/bin/docling"
     real_bin = libexec/"dir2mcp"
     (bin/"dir2mcp").write_env_script real_bin, DIR2MCP_DOCLING_COMMAND: docling_bin
     (bin/"dir2mcp-full").write_env_script real_bin, DIR2MCP_DOCLING_COMMAND: docling_bin
+  end
+
+  private
+
+  def prune_problematic_cv2_dylibs!(venv_dir)
+    cv2_dylibs = venv_dir/"lib/python3.12/site-packages/cv2/.dylibs"
+    return unless cv2_dylibs.directory?
+
+    %w[libb2.1.dylib libtheoradec.1.dylib libtheoraenc.1.dylib].each do |name|
+      (cv2_dylibs/name).delete if (cv2_dylibs/name).exist?
+    end
+  end
+
+  def fix_torch_macos_rpath!(venv_dir)
+    site_packages = Pathname.glob(venv_dir/"lib/python*/site-packages").find(&:directory?)
+    return unless site_packages
+
+    torch_lib = site_packages/"torch/lib"
+    return unless torch_lib.directory?
+
+    Pathname.glob(torch_lib/"*.dylib").each do |dylib|
+      rpath_id = "@rpath/#{dylib.basename}"
+      current_id = Utils.safe_popen_read("otool", "-D", dylib).lines[1]&.strip
+      next if current_id == rpath_id
+
+      MachO::Tools.change_dylib_id(dylib.to_s, rpath_id)
+      system "codesign", "--force", "--sign", "-", dylib
+    end
   end
 
   test do

@@ -5,21 +5,21 @@
 class Dir2mcp < Formula
   desc "Deploy any local directory as an MCP knowledge server with indexing, retrieval, and citations."
   homepage "https://github.com/dirstral/dir2mcp"
-  version "0.4.4"
+  version "0.5.0"
   license "MIT"
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.4.4/dir2mcp_0.4.4_darwin_amd64.tar.gz"
-      sha256 "598535e4123d64db5e905addf01904cfd11439257359c33118d0072daf39cc47"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.5.0/dir2mcp_0.5.0_darwin_amd64.tar.gz"
+      sha256 "3d86957f3420133114ed9778d9b9bf91e87b1016bbc5216f82f52f738bee351e"
 
       define_method(:install) do
         bin.install "dir2mcp"
       end
     end
     if Hardware::CPU.arm?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.4.4/dir2mcp_0.4.4_darwin_arm64.tar.gz"
-      sha256 "ad2dad129a776d3a22e9e85bbf2bc640f03f9bf7957c968e6976d769f82762c6"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.5.0/dir2mcp_0.5.0_darwin_arm64.tar.gz"
+      sha256 "7bf89e6a8d639b0d88fd3f7e05374879d117af3471d2a1da8cd649b37e5e6954"
 
       define_method(:install) do
         bin.install "dir2mcp"
@@ -29,32 +29,20 @@ class Dir2mcp < Formula
 
   on_linux do
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.4.4/dir2mcp_0.4.4_linux_amd64.tar.gz"
-      sha256 "bfe6170788b7e6769f0520d4af806dc0b9a553fe0d87f1e9a5125b344de9cdba"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.5.0/dir2mcp_0.5.0_linux_amd64.tar.gz"
+      sha256 "ecb1dbaaa1ef16c6ad1f8409a2b6bc358e648f263ad08f368f2ceba5d4494fff"
       define_method(:install) do
         bin.install "dir2mcp"
       end
     end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.4.4/dir2mcp_0.4.4_linux_arm64.tar.gz"
-      sha256 "ccdddce407bc348c0265b13ae00161086bd882d9147f7daac854f8430be049ef"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.5.0/dir2mcp_0.5.0_linux_arm64.tar.gz"
+      sha256 "9700d5de761d88ddb560e8b42c63cd8fada06549d2035ead931e5e8347d1039c"
       define_method(:install) do
         bin.install "dir2mcp"
       end
     end
   end
-
-  # IMPORTANT: This conflicts_with declaration was manually added and will be lost on regen.
-  # To persist this across regenerations, add the following to the GoReleaser config
-  # (.goreleaser.yml) in the upstream dirstral/dir2mcp repository under the brew section:
-  #
-  #   brews:
-  #     - name: dir2mcp
-  #       conflicts:
-  #         - dir2mcp-full
-  #
-  # See: https://goreleaser.com/customization/homebrew/#conflicts
-  conflicts_with "dir2mcp-full", because: "both install a dir2mcp runtime variant"
 
   test do
     system "#{bin}/dir2mcp", "version"

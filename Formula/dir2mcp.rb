@@ -8,6 +8,8 @@ class Dir2mcp < Formula
   version "0.5.1"
   license "MIT"
 
+  conflicts_with "dir2mcp-full", because: "both install a dir2mcp runtime variant"
+
   on_macos do
     if Hardware::CPU.intel?
       url "https://github.com/dirstral/dir2mcp/releases/download/v0.5.1/dir2mcp_0.5.1_darwin_amd64.tar.gz"

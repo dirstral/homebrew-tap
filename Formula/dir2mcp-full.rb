@@ -55,6 +55,18 @@ class Dir2mcpFull < Formula
 
   conflicts_with "dir2mcp", because: "both install a dir2mcp runtime variant"
 
+  # Surface the most common upgrade pitfall: zsh/bash cache the path to
+  # `dir2mcp` per shell session, so an already-open terminal can keep
+  # running the previous binary after `brew upgrade dir2mcp-full` until
+  # the cache is cleared.
+  def caveats
+    <<~EOS
+      If `dir2mcp version` reports an older version after upgrading,
+      run `hash -r` (bash/zsh) in any open shells to refresh the
+      command cache, or open a new terminal.
+    EOS
+  end
+
   def install_docling_runtime
     python = Formula["python@3.12"].opt_bin/"python3.12"
     venv_dir = libexec/"docling-venv"

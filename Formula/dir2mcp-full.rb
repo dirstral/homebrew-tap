@@ -8,6 +8,7 @@ class Dir2mcpFull < Formula
   license "MIT"
 
   depends_on "rust" => :build
+  depends_on "uv" => :build
   depends_on "python@3.12"
 
   DOCLING_VERSION = "2.92.0"
@@ -70,17 +71,21 @@ class Dir2mcpFull < Formula
     python = Formula["python@3.12"].opt_bin/"python3.12"
     venv_dir = libexec/"docling-venv"
     system python, "-m", "venv", venv_dir
-    pip = venv_dir/"bin/pip"
-    system pip, "install", "--upgrade", "pip"
+    uv = Formula["uv"].opt_bin/"uv"
+    venv_python = venv_dir/"bin/python"
     if OS.mac? && Hardware::CPU.arm?
       # ARM macOS linkage checks are stricter for some prebuilt wheels.
       # Keep rpds/pydantic-core from source here to avoid broken install IDs.
-      system pip, "install", "--ignore-installed",
-             "--no-binary", "pydantic-core,rpds-py",
+      system uv, "pip", "install",
+             "--python", venv_python,
+             "--no-binary-package", "pydantic-core",
+             "--no-binary-package", "rpds-py",
              "docling==#{DOCLING_VERSION}"
     else
-      # Prefer wheels on Intel/Linux to reduce source-build failures and time.
-      system pip, "install", "--ignore-installed", "--prefer-binary", "docling==#{DOCLING_VERSION}"
+      # uv prefers binary wheels by default; no --prefer-binary needed.
+      system uv, "pip", "install",
+             "--python", venv_python,
+             "docling==#{DOCLING_VERSION}"
     end
 
     prune_problematic_cv2_dylibs!(venv_dir) if OS.mac?

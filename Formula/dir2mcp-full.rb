@@ -7,7 +7,6 @@ class Dir2mcpFull < Formula
   version "0.5.5"
   license "MIT"
 
-  depends_on "rust" => :build
   depends_on "uv" => :build
   depends_on "python@3.12"
 
@@ -68,21 +67,14 @@ class Dir2mcpFull < Formula
   end
 
   def install_docling_runtime
+    uv = Formula["uv"].opt_bin/"uv"
     python = Formula["python@3.12"].opt_bin/"python3.12"
     venv_dir = libexec/"docling-venv"
-    system python, "-m", "venv", venv_dir
-    uv = Formula["uv"].opt_bin/"uv"
+    system uv, "venv", "--python", python, venv_dir
     venv_python = venv_dir/"bin/python"
-    if OS.mac? && Hardware::CPU.arm?
-      # ARM macOS linkage checks are stricter for some prebuilt wheels.
-      # Keep rpds/pydantic-core from source here to avoid broken install IDs.
-      system uv, "pip", "install",
-             "--python", venv_python,
-             "--no-binary", "pydantic-core",
-             "--no-binary", "rpds-py",
-             "docling==#{DOCLING_VERSION}"
-    else
-      # uv prefers binary wheels by default; no --prefer-binary needed.
+    # UV_COMPILE_BYTECODE pre-compiles .pyc files at install time so the
+    # first `docling` invocation doesn't pay the bytecode-compile tax.
+    with_env(UV_COMPILE_BYTECODE: "1") do
       system uv, "pip", "install",
              "--python", venv_python,
              "docling==#{DOCLING_VERSION}"

@@ -78,8 +78,8 @@ class Dir2mcpFull < Formula
       # Keep rpds/pydantic-core from source here to avoid broken install IDs.
       system uv, "pip", "install",
              "--python", venv_python,
-             "--no-binary-package", "pydantic-core",
-             "--no-binary-package", "rpds-py",
+             "--no-binary", "pydantic-core",
+             "--no-binary", "rpds-py",
              "docling==#{DOCLING_VERSION}"
     else
       # uv prefers binary wheels by default; no --prefer-binary needed.

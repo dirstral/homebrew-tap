@@ -8,6 +8,7 @@ class Dir2mcpFull < Formula
   license "MIT"
 
   depends_on "rust" => :build
+  depends_on "uv" => :build
   depends_on "python@3.12"
 
   DOCLING_VERSION = "2.92.0"
@@ -67,20 +68,31 @@ class Dir2mcpFull < Formula
   end
 
   def install_docling_runtime
+    uv = Formula["uv"].opt_bin/"uv"
     python = Formula["python@3.12"].opt_bin/"python3.12"
     venv_dir = libexec/"docling-venv"
-    system python, "-m", "venv", venv_dir
-    pip = venv_dir/"bin/pip"
-    system pip, "install", "--upgrade", "pip"
-    if OS.mac? && Hardware::CPU.arm?
-      # ARM macOS linkage checks are stricter for some prebuilt wheels.
-      # Keep rpds/pydantic-core from source here to avoid broken install IDs.
-      system pip, "install", "--ignore-installed",
-             "--no-binary", "pydantic-core,rpds-py",
-             "docling==#{DOCLING_VERSION}"
-    else
-      # Prefer wheels on Intel/Linux to reduce source-build failures and time.
-      system pip, "install", "--ignore-installed", "--prefer-binary", "docling==#{DOCLING_VERSION}"
+    system uv, "venv", "--python", python, venv_dir
+    venv_python = venv_dir/"bin/python"
+    # UV_COMPILE_BYTECODE pre-compiles .pyc files at install time so the
+    # first `docling` invocation doesn't pay the bytecode-compile tax.
+    with_env(UV_COMPILE_BYTECODE: "1") do
+      if OS.mac? && Hardware::CPU.arm?
+        # ARM macOS prebuilt wheels for pydantic-core/rpds-py ship with
+        # insufficient Mach-O headerpad, so brew's install_name_tool
+        # rewrite fails ("Updated load commands do not fit in the
+        # header"). Force a source build for these two packages so the
+        # resulting .so has enough headerpad. This is the reason the
+        # `rust` build dep is still required on this arch.
+        system uv, "pip", "install",
+               "--python", venv_python,
+               "--no-binary", "pydantic-core",
+               "--no-binary", "rpds-py",
+               "docling==#{DOCLING_VERSION}"
+      else
+        system uv, "pip", "install",
+               "--python", venv_python,
+               "docling==#{DOCLING_VERSION}"
+      end
     end
 
     prune_problematic_cv2_dylibs!(venv_dir) if OS.mac?

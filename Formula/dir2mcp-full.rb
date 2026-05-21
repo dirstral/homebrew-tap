@@ -7,6 +7,7 @@ class Dir2mcpFull < Formula
   version "0.5.5"
   license "MIT"
 
+  depends_on "rust" => :build
   depends_on "uv" => :build
   depends_on "python@3.12"
 
@@ -75,9 +76,23 @@ class Dir2mcpFull < Formula
     # UV_COMPILE_BYTECODE pre-compiles .pyc files at install time so the
     # first `docling` invocation doesn't pay the bytecode-compile tax.
     with_env(UV_COMPILE_BYTECODE: "1") do
-      system uv, "pip", "install",
-             "--python", venv_python,
-             "docling==#{DOCLING_VERSION}"
+      if OS.mac? && Hardware::CPU.arm?
+        # ARM macOS prebuilt wheels for pydantic-core/rpds-py ship with
+        # insufficient Mach-O headerpad, so brew's install_name_tool
+        # rewrite fails ("Updated load commands do not fit in the
+        # header"). Force a source build for these two packages so the
+        # resulting .so has enough headerpad. This is the reason the
+        # `rust` build dep is still required on this arch.
+        system uv, "pip", "install",
+               "--python", venv_python,
+               "--no-binary", "pydantic-core",
+               "--no-binary", "rpds-py",
+               "docling==#{DOCLING_VERSION}"
+      else
+        system uv, "pip", "install",
+               "--python", venv_python,
+               "docling==#{DOCLING_VERSION}"
+      end
     end
 
     prune_problematic_cv2_dylibs!(venv_dir) if OS.mac?

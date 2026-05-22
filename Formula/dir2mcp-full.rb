@@ -13,6 +13,27 @@ class Dir2mcpFull < Formula
 
   DOCLING_VERSION = "2.92.0"
 
+  # Pin the torch/transformers stack the docling venv resolves against.
+  #
+  # docling-slim 2.92.0's published constraints are too loose:
+  #   torchvision <1,>=0      (any version)
+  #   transformers <6,>=4.42  (excludes 5.0-5.3, allows 5.4+)
+  #
+  # In practice docling 2.92.0's code imports `AutoProcessor` from a
+  # path that was reorganized in transformers 5.x, and the torch /
+  # torchvision combo PyPI hands out on a fresh install is not always
+  # ABI-coherent (e.g. recent installs picked torch 2.12 + torchvision
+  # 0.27 and crashed at import with "operator torchvision::nms does
+  # not exist"). Without pins, install reliability decays as new
+  # transitive releases land on PyPI.
+  #
+  # The triple below is the most recent combination verified to load
+  # docling 2.92.0 cleanly. Bump these in lockstep when bumping
+  # DOCLING_VERSION; re-verify with `docling --help` post-install.
+  TORCH_VERSION = "2.5.1"
+  TORCHVISION_VERSION = "0.20.1"
+  TRANSFORMERS_VERSION = "4.46.3"
+
   on_macos do
     if Hardware::CPU.intel?
       url "https://github.com/dirstral/dir2mcp/releases/download/v0.5.6/dir2mcp_0.5.6_darwin_amd64.tar.gz"
@@ -76,6 +97,10 @@ class Dir2mcpFull < Formula
     # UV_COMPILE_BYTECODE pre-compiles .pyc files at install time so the
     # first `docling` invocation doesn't pay the bytecode-compile tax.
     with_env(UV_COMPILE_BYTECODE: "1") do
+      torch_pin = "torch==#{TORCH_VERSION}"
+      torchvision_pin = "torchvision==#{TORCHVISION_VERSION}"
+      transformers_pin = "transformers==#{TRANSFORMERS_VERSION}"
+      docling_pin = "docling==#{DOCLING_VERSION}"
       if OS.mac? && Hardware::CPU.arm?
         # ARM macOS prebuilt wheels for pydantic-core/rpds-py ship with
         # insufficient Mach-O headerpad, so brew's install_name_tool
@@ -87,11 +112,11 @@ class Dir2mcpFull < Formula
                "--python", venv_python,
                "--no-binary", "pydantic-core",
                "--no-binary", "rpds-py",
-               "docling==#{DOCLING_VERSION}"
+               torch_pin, torchvision_pin, transformers_pin, docling_pin
       else
         system uv, "pip", "install",
                "--python", venv_python,
-               "docling==#{DOCLING_VERSION}"
+               torch_pin, torchvision_pin, transformers_pin, docling_pin
       end
     end
 

@@ -19,6 +19,10 @@ jobs:
         run: |
           brew untap dirstral/tap || true
           brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+          # Homebrew now refuses to load formulae from non-official taps
+          # unless they are explicitly trusted. This is our own tap under
+          # test, so trust it so audit/install can load the formulae.
+          brew trust dirstral/tap
 
       - name: Audit formula
         run: |
@@ -52,6 +56,10 @@ jobs:
         run: |
           brew untap dirstral/tap || true
           brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+          # Homebrew now refuses to load formulae from non-official taps
+          # unless they are explicitly trusted. This is our own tap under
+          # test, so trust it so audit/install can load the formulae.
+          brew trust dirstral/tap
 
       - name: Install formula
         run: |
@@ -73,6 +81,12 @@ jobs:
           brew untap dirstral/tap || true
   install-linux:
     runs-on: ubuntu-latest
+    # Homebrew's Linux build sandbox needs rootless Bubblewrap, which needs
+    # unprivileged user namespaces. GitHub-hosted runners restrict those, so
+    # the sandbox cannot start even with bubblewrap installed. Disable the
+    # Linux sandbox in CI — we are only installing our own tap's formulae.
+    env:
+      HOMEBREW_NO_SANDBOX_LINUX: "1"
     strategy:
       fail-fast: false
       matrix:
@@ -88,6 +102,10 @@ jobs:
         run: |
           brew untap dirstral/tap || true
           brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+          # Homebrew now refuses to load formulae from non-official taps
+          # unless they are explicitly trusted. This is our own tap under
+          # test, so trust it so audit/install can load the formulae.
+          brew trust dirstral/tap
 
       - name: Install formula
         run: |

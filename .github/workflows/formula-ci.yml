@@ -92,6 +92,13 @@ jobs:
         uses: Homebrew/actions/setup-homebrew@main
         continue-on-error: true
 
+      - name: Install bubblewrap (Linux build sandbox dependency)
+        run: |
+          # Homebrew now requires bubblewrap for its Linux build sandbox;
+          # the GitHub ubuntu runner image does not ship it by default.
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+
       - name: Tap local checkout
         run: |
           brew untap dirstral/tap || true

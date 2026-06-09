@@ -81,6 +81,12 @@ jobs:
           brew untap dirstral/tap || true
   install-linux:
     runs-on: ubuntu-latest
+    # Homebrew's Linux build sandbox needs rootless Bubblewrap, which needs
+    # unprivileged user namespaces. GitHub-hosted runners restrict those, so
+    # the sandbox cannot start even with bubblewrap installed. Disable the
+    # Linux sandbox in CI — we are only installing our own tap's formulae.
+    env:
+      HOMEBREW_NO_SANDBOX_LINUX: "1"
     strategy:
       fail-fast: false
       matrix:
@@ -91,13 +97,6 @@ jobs:
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@main
         continue-on-error: true
-
-      - name: Install bubblewrap (Linux build sandbox dependency)
-        run: |
-          # Homebrew now requires bubblewrap for its Linux build sandbox;
-          # the GitHub ubuntu runner image does not ship it by default.
-          sudo apt-get update
-          sudo apt-get install -y bubblewrap
 
       - name: Tap local checkout
         run: |

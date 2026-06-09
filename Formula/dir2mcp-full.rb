@@ -13,26 +13,141 @@ class Dir2mcpFull < Formula
 
   DOCLING_VERSION = "2.92.0"
 
-  # Pin the torch/transformers stack the docling venv resolves against.
+  # Fully pinned dependency lock for the docling venv.
   #
-  # docling-slim 2.92.0's published constraints are too loose:
-  #   torchvision <1,>=0      (any version)
-  #   transformers <6,>=4.42  (excludes 5.0-5.3, allows 5.4+)
+  # docling-slim's published constraints are too loose (e.g. torchvision
+  # <1,>=0; transformers <6,>=4.42), and the torch/torchvision combo PyPI
+  # hands out on a fresh install is not always ABI-coherent (recent installs
+  # picked torch 2.12 + torchvision 0.27 and crashed at import with "operator
+  # torchvision::nms does not exist"). docling 2.92.0 also imports
+  # `AutoProcessor` from a path reorganized in transformers 5.x. Pinning only
+  # the four top-level packages still let transitive releases drift, so
+  # install reliability decayed as new wheels landed on PyPI.
   #
-  # In practice docling 2.92.0's code imports `AutoProcessor` from a
-  # path that was reorganized in transformers 5.x, and the torch /
-  # torchvision combo PyPI hands out on a fresh install is not always
-  # ABI-coherent (e.g. recent installs picked torch 2.12 + torchvision
-  # 0.27 and crashed at import with "operator torchvision::nms does
-  # not exist"). Without pins, install reliability decays as new
-  # transitive releases land on PyPI.
-  #
-  # The triple below is the most recent combination verified to load
-  # docling 2.92.0 cleanly. Bump these in lockstep when bumping
-  # DOCLING_VERSION; re-verify with `docling --help` post-install.
-  TORCH_VERSION = "2.5.1"
-  TORCHVISION_VERSION = "0.20.1"
-  TRANSFORMERS_VERSION = "4.46.3"
+  # DOCLING_LOCK freezes the **entire** transitive tree (markers included for
+  # Linux CUDA wheels), so every install produces the same known-good
+  # environment regardless of when it runs. Regenerate when bumping
+  # DOCLING_VERSION:
+  #   printf 'torch==2.5.1\ntorchvision==0.20.1\ntransformers==4.46.3\ndocling==<new>\n' > in.txt
+  #   uv pip compile --universal --python-version 3.12 --no-annotate --no-header in.txt
+  # then re-verify `docling --version` in the built venv.
+  DOCLING_LOCK = <<~LOCK
+    accelerate==1.13.0
+    annotated-doc==0.0.4
+    annotated-types==0.7.0
+    antlr4-python3-runtime==4.9.3
+    anyio==4.13.0
+    attrs==26.1.0
+    beautifulsoup4==4.15.0
+    certifi==2026.5.20
+    charset-normalizer==3.4.7
+    click==8.4.1
+    colorama==0.4.6 ; sys_platform == 'win32'
+    colorlog==6.10.1
+    defusedxml==0.7.1
+    dill==0.4.1
+    docling==2.92.0
+    docling-core==2.80.0
+    docling-ibm-models==3.13.3
+    docling-parse==5.11.0
+    docling-slim==2.92.0
+    et-xmlfile==2.0.0
+    faker==40.21.0
+    filelock==3.29.1
+    filetype==1.2.0
+    fsspec==2026.4.0
+    h11==0.16.0
+    hf-xet==1.5.1 ; platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'
+    httpcore==1.0.9
+    httpx==0.28.1
+    huggingface-hub==0.36.2
+    idna==3.18
+    jinja2==3.1.6
+    jsonlines==4.0.0
+    jsonref==1.1.0
+    jsonschema==4.26.0
+    jsonschema-specifications==2025.9.1
+    latex2mathml==3.81.0
+    lxml==6.1.1
+    markdown-it-py==4.2.0
+    marko==2.2.3
+    markupsafe==3.0.3
+    mdurl==0.1.2
+    mpire==2.10.2
+    mpmath==1.3.0
+    multiprocess==0.70.19
+    networkx==3.6.1
+    numpy==2.4.6
+    nvidia-cublas-cu12==12.4.5.8 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+    nvidia-cuda-cupti-cu12==12.4.127 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+    nvidia-cuda-nvrtc-cu12==12.4.127 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+    nvidia-cuda-runtime-cu12==12.4.127 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+    nvidia-cudnn-cu12==9.1.0.70 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+    nvidia-cufft-cu12==11.2.1.3 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+    nvidia-curand-cu12==10.3.5.147 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+    nvidia-cusolver-cu12==11.6.1.9 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+    nvidia-cusparse-cu12==12.3.1.170 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+    nvidia-nccl-cu12==2.21.5 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+    nvidia-nvjitlink-cu12==12.4.127 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+    nvidia-nvtx-cu12==12.4.127 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+    omegaconf==2.3.0
+    opencv-python==4.13.0.92
+    openpyxl==3.1.5
+    packaging==26.2
+    pandas==3.0.3
+    pillow==12.2.0
+    pluggy==1.6.0
+    polyfactory==3.3.0
+    psutil==7.2.2
+    pyclipper==1.4.0
+    pydantic==2.13.4
+    pydantic-core==2.46.4
+    pydantic-settings==2.14.1
+    pygments==2.20.0
+    pylatexenc==2.10
+    pypdfium2==5.9.0
+    python-dateutil==2.9.0.post0
+    python-docx==1.2.0
+    python-dotenv==1.2.2
+    python-pptx==1.0.2
+    pywin32==312 ; sys_platform == 'win32'
+    pyyaml==6.0.3
+    rapidocr==3.8.1
+    referencing==0.37.0
+    regex==2026.5.9
+    requests==2.34.2
+    rich==15.0.0
+    rpds-py==2026.5.1
+    rtree==1.4.1
+    safetensors==0.8.0
+    scipy==1.17.1
+    semchunk==3.2.5
+    setuptools==82.0.1
+    shapely==2.1.2
+    shellingham==1.5.4
+    six==1.17.0
+    soupsieve==2.8.4
+    sympy==1.13.1
+    tabulate==0.10.0
+    tokenizers==0.20.3
+    torch==2.5.1
+    torchvision==0.20.1
+    tqdm==4.68.2
+    transformers==4.46.3
+    tree-sitter==0.25.2
+    tree-sitter-c==0.24.2
+    tree-sitter-javascript==0.25.0
+    tree-sitter-python==0.25.0
+    tree-sitter-typescript==0.23.2
+    triton==3.1.0 ; python_full_version < '3.13' and platform_machine == 'x86_64' and sys_platform == 'linux'
+    typer==0.21.2
+    typing-extensions==4.15.0
+    typing-inspection==0.4.2
+    tzdata==2026.2 ; sys_platform == 'emscripten' or sys_platform == 'win32'
+    urllib3==2.7.0
+    websockets==16.0
+    xlsxwriter==3.2.9
+  LOCK
 
   on_macos do
     if Hardware::CPU.intel?
@@ -94,13 +209,13 @@ class Dir2mcpFull < Formula
     venv_dir = libexec/"docling-venv"
     system uv, "venv", "--python", python, venv_dir
     venv_python = venv_dir/"bin/python"
+    # Install the fully pinned tree from the embedded lock so the resolved
+    # versions never drift between installs.
+    lock_file = buildpath/"docling-lock.txt"
+    lock_file.write(DOCLING_LOCK)
     # UV_COMPILE_BYTECODE pre-compiles .pyc files at install time so the
     # first `docling` invocation doesn't pay the bytecode-compile tax.
     with_env(UV_COMPILE_BYTECODE: "1") do
-      torch_pin = "torch==#{TORCH_VERSION}"
-      torchvision_pin = "torchvision==#{TORCHVISION_VERSION}"
-      transformers_pin = "transformers==#{TRANSFORMERS_VERSION}"
-      docling_pin = "docling==#{DOCLING_VERSION}"
       if OS.mac? && Hardware::CPU.arm?
         # ARM macOS prebuilt wheels for pydantic-core/rpds-py ship with
         # insufficient Mach-O headerpad, so brew's install_name_tool
@@ -112,11 +227,11 @@ class Dir2mcpFull < Formula
                "--python", venv_python,
                "--no-binary", "pydantic-core",
                "--no-binary", "rpds-py",
-               torch_pin, torchvision_pin, transformers_pin, docling_pin
+               "--requirement", lock_file
       else
         system uv, "pip", "install",
                "--python", venv_python,
-               torch_pin, torchvision_pin, transformers_pin, docling_pin
+               "--requirement", lock_file
       end
     end
 

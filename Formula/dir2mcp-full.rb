@@ -6,6 +6,7 @@ class Dir2mcpFull < Formula
   homepage "https://github.com/dirstral/dir2mcp"
   version "0.6.1"
   license "MIT"
+  revision 1
 
   depends_on "rust" => :build
   depends_on "uv" => :build
@@ -205,6 +206,25 @@ class Dir2mcpFull < Formula
   # `dir2mcp` per shell session, so an already-open terminal can keep
   # running the previous binary after `brew upgrade dir2mcp-full` until
   # the cache is cleared.
+  def post_install
+    return unless OS.mac?
+
+    torch_lib = libexec/"docling-venv/lib/python3.12/site-packages/torch/lib"
+    return unless torch_lib.directory?
+
+    Pathname.glob(torch_lib/"*.dylib").each do |dylib|
+      base = dylib.basename.to_s
+      rpath_id = "@rpath/#{base}"
+      if Utils.safe_popen_read("otool", "-D", dylib).lines[1]&.strip != rpath_id
+        MachO::Tools.change_dylib_id(dylib.to_s, rpath_id)
+      end
+      unless Utils.safe_popen_read("otool", "-l", dylib).include?(" path @loader_path ")
+        MachO::Tools.add_rpath(dylib.to_s, "@loader_path")
+      end
+      system "codesign", "--force", "--sign", "-", dylib
+    end
+  end
+
   def caveats
     <<~EOS
       If `dir2mcp version` reports an older version after upgrading,
@@ -253,13 +273,27 @@ class Dir2mcpFull < Formula
     end
 
     prune_problematic_cv2_dylibs!(venv_dir) if OS.mac?
-    fix_torch_macos_rpath!(venv_dir) if OS.mac?
 
     docling_bin = opt_libexec/"docling-venv/bin/docling"
     real_bin = libexec/"dir2mcp"
     (bin/"dir2mcp").write_env_script real_bin, DIR2MCP_DOCLING_COMMAND: docling_bin
     (bin/"dir2mcp-full").write_env_script real_bin, DIR2MCP_DOCLING_COMMAND: docling_bin
   end
+
+  # Restore the torch dylibs' self-references AFTER Homebrew's relocation.
+  #
+  # The prebuilt torch wheel ships its dylibs with ID `@rpath/<name>` and an
+  # `LC_RPATH @loader_path`, and torchvision's `_C.so` references libtorch via
+  # `@rpath/...`. Homebrew's keg relocation rewrites those IDs to absolute Cellar
+  # paths and strips `@loader_path`, so the libtorch loaded by `import torch`
+  # registers under its absolute name while torchvision still asks for
+  # `@rpath/libtorch*` — dyld then loads a second libtorch and torchvision's ops
+  # never register ("operator torchvision::nms does not exist") at docling import.
+  #
+  # This must run in post_install: relocation happens AFTER the install method
+  # returns, so an install-time fix is undone (the bug the earlier
+  # fix_torch_macos_rpath! couldn't beat). Here we re-assert `@rpath` IDs and the
+  # `@loader_path` rpath, matching the working pip layout, then re-sign.
 
   private
 
@@ -272,25 +306,10 @@ class Dir2mcpFull < Formula
     end
   end
 
-  def fix_torch_macos_rpath!(venv_dir)
-    site_packages = Pathname.glob(venv_dir/"lib/python*/site-packages").find(&:directory?)
-    return unless site_packages
-
-    torch_lib = site_packages/"torch/lib"
-    return unless torch_lib.directory?
-
-    Pathname.glob(torch_lib/"*.dylib").each do |dylib|
-      rpath_id = "@rpath/#{dylib.basename}"
-      current_id = Utils.safe_popen_read("otool", "-D", dylib).lines[1]&.strip
-      next if current_id == rpath_id
-
-      MachO::Tools.change_dylib_id(dylib.to_s, rpath_id)
-      system "codesign", "--force", "--sign", "-", dylib
-    end
-  end
-
   test do
     system "#{bin}/dir2mcp", "version"
-    assert_match "docling", shell_output("#{libexec}/docling-venv/bin/docling --help 2>&1")
+    # Exercise the docling runtime (imports torch/torchvision/transformers), not
+    # just --help, so an ABI-broken venv fails the test instead of shipping.
+    assert_match "Docling version", shell_output("#{libexec}/docling-venv/bin/docling --version 2>&1")
   end
 end

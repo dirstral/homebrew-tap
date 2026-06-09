@@ -24,6 +24,14 @@ jobs:
           # test, so trust it so audit/install can load the formulae.
           brew trust dirstral/tap
 
+      - name: Verify full-formula bootstrap invariant
+        run: |
+          rg -n 'system python, "-m", "venv", venv_dir' Formula/dir2mcp-full.rb
+          if rg -n 'system uv, "venv"|uv, "venv"' Formula/dir2mcp-full.rb; then
+            echo "dir2mcp-full must not bootstrap its venv with uv"
+            exit 1
+          fi
+
       - name: Audit formula
         run: |
           brew audit --strict dirstral/tap/dir2mcp-full

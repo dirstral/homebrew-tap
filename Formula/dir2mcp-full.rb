@@ -9,7 +9,6 @@ class Dir2mcpFull < Formula
   revision 1
 
   depends_on "rust" => :build
-  depends_on "uv" => :build
   depends_on "python@3.12"
 
   DOCLING_VERSION = "2.92.0"
@@ -35,9 +34,9 @@ class Dir2mcpFull < Formula
   # Build-time backend for the macOS-ARM source builds of pydantic-core and
   # rpds-py (see install_docling_runtime). Their PEP 517 build-system.requires
   # aren't part of DOCLING_LOCK (a runtime lock), so pin the build backend
-  # here and feed it via `uv pip install --build-constraints` to keep the
-  # source build reproducible. Both packages build with maturin. Refresh
-  # alongside DOCLING_LOCK when bumping DOCLING_VERSION.
+  # here and feed it via `pip install --build-constraint` to keep the source
+  # build reproducible. Both packages build with maturin. Refresh alongside
+  # DOCLING_LOCK when bumping DOCLING_VERSION.
   DOCLING_BUILD_CONSTRAINTS = <<~CONS
     maturin==1.13.3
   CONS
@@ -234,18 +233,20 @@ class Dir2mcpFull < Formula
   end
 
   def install_docling_runtime
-    uv = Formula["uv"].opt_bin/"uv"
     python = Formula["python@3.12"].opt_bin/"python3.12"
     venv_dir = libexec/"docling-venv"
-    system uv, "venv", "--python", python, venv_dir
+    # Use CPython's stdlib venv bootstrap directly instead of `uv venv`.
+    # Some Homebrew python@3.12 bottles on newer macOS releases return an
+    # empty `platform.mac_ver()`, which makes `uv venv --python <path>` abort
+    # before the environment is created even though `python -m venv` works.
+    system python, "-m", "venv", venv_dir
     venv_python = venv_dir/"bin/python"
+    system venv_python, "-m", "pip", "install", "--upgrade", "pip"
     # Install the fully pinned tree from the embedded lock so the resolved
     # versions never drift between installs.
     lock_file = buildpath/"docling-lock.txt"
     lock_file.write(DOCLING_LOCK)
-    # UV_COMPILE_BYTECODE pre-compiles .pyc files at install time so the
-    # first `docling` invocation doesn't pay the bytecode-compile tax.
-    with_env(UV_COMPILE_BYTECODE: "1") do
+    with_env(PIP_DISABLE_PIP_VERSION_CHECK: "1") do
       if OS.mac? && Hardware::CPU.arm?
         # ARM macOS prebuilt wheels for pydantic-core/rpds-py ship with
         # insufficient Mach-O headerpad, so brew's install_name_tool
@@ -256,18 +257,15 @@ class Dir2mcpFull < Formula
         #
         # The forced source builds run in PEP 517 isolation, whose build
         # backend (maturin) isn't covered by the runtime lock; pin it via
-        # --build-constraints so the build is reproducible too.
+        # --build-constraint so the build is reproducible too.
         build_constraints = buildpath/"docling-build-constraints.txt"
         build_constraints.write(DOCLING_BUILD_CONSTRAINTS)
-        system uv, "pip", "install",
-               "--python", venv_python,
-               "--no-binary", "pydantic-core",
-               "--no-binary", "rpds-py",
-               "--build-constraints", build_constraints,
+        system venv_python, "-m", "pip", "install",
+               "--no-binary", "pydantic-core,rpds-py",
+               "--build-constraint", build_constraints,
                "--requirement", lock_file
       else
-        system uv, "pip", "install",
-               "--python", venv_python,
+        system venv_python, "-m", "pip", "install",
                "--requirement", lock_file
       end
     end

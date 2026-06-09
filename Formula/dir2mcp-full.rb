@@ -31,7 +31,17 @@ class Dir2mcpFull < Formula
   #   printf 'torch==2.5.1\ntorchvision==0.20.1\ntransformers==4.46.3\ndocling==<new>\n' > in.txt
   #   uv pip compile --universal --python-version 3.12 --no-annotate --no-header in.txt
   # then re-verify `docling --version` in the built venv.
-  DOCLING_LOCK = <<~LOCK
+  # Build-time backend for the macOS-ARM source builds of pydantic-core and
+  # rpds-py (see install_docling_runtime). Their PEP 517 build-system.requires
+  # aren't part of DOCLING_LOCK (a runtime lock), so pin the build backend
+  # here and feed it via `uv pip install --build-constraints` to keep the
+  # source build reproducible. Both packages build with maturin. Refresh
+  # alongside DOCLING_LOCK when bumping DOCLING_VERSION.
+  DOCLING_BUILD_CONSTRAINTS = <<~CONS
+    maturin==1.13.3
+  CONS
+
+  DOCLING_LOCK = <<~LOCK.freeze
     accelerate==1.13.0
     annotated-doc==0.0.4
     annotated-types==0.7.0
@@ -46,7 +56,7 @@ class Dir2mcpFull < Formula
     colorlog==6.10.1
     defusedxml==0.7.1
     dill==0.4.1
-    docling==2.92.0
+    docling==#{DOCLING_VERSION}
     docling-core==2.80.0
     docling-ibm-models==3.13.3
     docling-parse==5.11.0
@@ -223,10 +233,17 @@ class Dir2mcpFull < Formula
         # header"). Force a source build for these two packages so the
         # resulting .so has enough headerpad. This is the reason the
         # `rust` build dep is still required on this arch.
+        #
+        # The forced source builds run in PEP 517 isolation, whose build
+        # backend (maturin) isn't covered by the runtime lock; pin it via
+        # --build-constraints so the build is reproducible too.
+        build_constraints = buildpath/"docling-build-constraints.txt"
+        build_constraints.write(DOCLING_BUILD_CONSTRAINTS)
         system uv, "pip", "install",
                "--python", venv_python,
                "--no-binary", "pydantic-core",
                "--no-binary", "rpds-py",
+               "--build-constraints", build_constraints,
                "--requirement", lock_file
       else
         system uv, "pip", "install",

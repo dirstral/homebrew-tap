@@ -11,10 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@main
-        continue-on-error: true
-
       - name: Tap local checkout
         run: |
           brew untap dirstral/tap || true
@@ -53,10 +49,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@main
-        continue-on-error: true
-
       - name: Tap local checkout
         run: |
           brew untap dirstral/tap || true
@@ -94,10 +86,6 @@ jobs:
         formula: [dir2mcp, dir2mcp-full]
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@main
-        continue-on-error: true
 
       - name: Tap local checkout
         run: |

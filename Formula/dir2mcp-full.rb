@@ -10,6 +10,9 @@ class Dir2mcpFull < Formula
 
   depends_on "rust" => :build
   depends_on "python@3.12"
+  on_macos do
+    depends_on "expat"
+  end
 
   DOCLING_VERSION = "2.92.0"
 
@@ -241,8 +244,14 @@ class Dir2mcpFull < Formula
     # Some Homebrew python@3.12 bottles on newer macOS releases return an
     # empty `platform.mac_ver()`, which makes `uv venv --python <path>` abort
     # before the environment is created even though `python -m venv` works.
-    system python, "-m", "venv", venv_dir
+    # On some Tahoe-era installs, `ensurepip` fails because pyexpat links
+    # against `/usr/lib/libexpat.1.dylib`, whose symbol set is too old for the
+    # shipped extension module. Build the venv without pip first, add a
+    # venv-local pyexpat shim if needed, then run ensurepip inside the venv.
+    system python, "-m", "venv", "--without-pip", venv_dir
+    install_venv_pyexpat_shim!(python, venv_dir) if OS.mac?
     venv_python = venv_dir/"bin/python"
+    system venv_python, "-m", "ensurepip", "--upgrade", "--default-pip"
     system venv_python, "-m", "pip", "install", DOCLING_PIP_REQUIREMENT
     # Install the fully pinned tree from the embedded lock so the resolved
     # versions never drift between installs.
@@ -296,6 +305,46 @@ class Dir2mcpFull < Formula
   # `@loader_path` rpath, matching the working pip layout, then re-sign.
 
   private
+
+  def install_venv_pyexpat_shim!(python, venv_dir)
+    host_pyexpat = Utils.safe_popen_read(
+      python,
+      "-c",
+      'import pathlib, sysconfig; print(pathlib.Path(sysconfig.get_config_var("DESTSHARED")) / "pyexpat.cpython-312-darwin.so")'
+    ).strip
+    return if host_pyexpat.empty?
+    return unless File.exist?(host_pyexpat)
+
+    linked = Utils.safe_popen_read("otool", "-L", host_pyexpat)
+    return unless linked.include?("/usr/lib/libexpat.1.dylib")
+
+    expat_dylib = Formula["expat"].opt_lib/"libexpat.1.dylib"
+    return unless expat_dylib.exist?
+
+    site_packages = venv_dir/"lib/python3.12/site-packages"
+    shim_dir = site_packages/"_dir2mcp_pyexpat"
+    shim_dir.mkpath
+    shim_pyexpat = shim_dir/File.basename(host_pyexpat)
+    cp host_pyexpat, shim_pyexpat
+
+    system "install_name_tool",
+           "-change",
+           "/usr/lib/libexpat.1.dylib",
+           expat_dylib,
+           shim_pyexpat
+    system "codesign", "--force", "--sign", "-", shim_pyexpat
+
+    (site_packages/"sitecustomize.py").write <<~PY
+      import pathlib
+      import sys
+
+      _dir2mcp_pyexpat = pathlib.Path(__file__).with_name("_dir2mcp_pyexpat")
+      if _dir2mcp_pyexpat.is_dir():
+        _path = str(_dir2mcp_pyexpat)
+        if _path not in sys.path:
+          sys.path.insert(0, _path)
+    PY
+  end
 
   def prune_problematic_cv2_dylibs!(venv_dir)
     cv2_dylibs = venv_dir/"lib/python3.12/site-packages/cv2/.dylibs"

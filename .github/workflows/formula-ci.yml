@@ -27,6 +27,8 @@ jobs:
       - name: Verify full-formula bootstrap invariant
         run: |
           grep -nE -- '-m".*"venv"|" -m ", "venv"|"-m", "venv"' Formula/dir2mcp-full.rb
+          grep -n 'depends_on "expat"' Formula/dir2mcp-full.rb
+          grep -n 'install_venv_pyexpat_shim!(python, venv_dir)' Formula/dir2mcp-full.rb
           if grep -nE -- 'system .*"venv".*uv|system .*uv.*"venv"|Formula\["uv"\].*"venv"|opt_bin/"uv".*"venv"' Formula/dir2mcp-full.rb; then
             echo "dir2mcp-full must not bootstrap its venv with uv"
             exit 1

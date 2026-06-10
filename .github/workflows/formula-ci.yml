@@ -26,8 +26,8 @@ jobs:
 
       - name: Verify full-formula bootstrap invariant
         run: |
-          rg -n 'system python, "-m", "venv", venv_dir' Formula/dir2mcp-full.rb
-          if rg -n 'system uv, "venv"|uv, "venv"' Formula/dir2mcp-full.rb; then
+          grep -n 'system python, "-m", "venv", venv_dir' Formula/dir2mcp-full.rb
+          if grep -n 'system uv, "venv"' Formula/dir2mcp-full.rb; then
             echo "dir2mcp-full must not bootstrap its venv with uv"
             exit 1
           fi
@@ -35,11 +35,6 @@ jobs:
       - name: Audit formula
         run: |
           brew audit --strict dirstral/tap/dir2mcp-full
-
-      - name: Cleanup tap
-        if: ${{ always() }}
-        run: |
-          brew untap dirstral/tap || true
 
   install-macos:
     strategy:
@@ -83,12 +78,6 @@ jobs:
           # Actually run docling (imports torch/torchvision/transformers), not
           # just check the file exists, so an ABI-broken venv fails CI.
           "$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling --version
-
-      - name: Cleanup tap
-        if: ${{ always() }}
-        run: |
-          brew uninstall --ignore-dependencies --formula "${{ matrix.formula }}" || true
-          brew untap dirstral/tap || true
   install-linux:
     runs-on: ubuntu-latest
     # Homebrew's Linux build sandbox needs rootless Bubblewrap, which needs
@@ -134,9 +123,3 @@ jobs:
           # now only assert the binary exists; the dir2mcp functional check
           # detects a broken Linux venv at runtime and falls back to Mistral OCR.
           test -x "$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling
-
-      - name: Cleanup tap
-        if: ${{ always() }}
-        run: |
-          brew uninstall --ignore-dependencies --formula "${{ matrix.formula }}" || true
-          brew untap dirstral/tap || true

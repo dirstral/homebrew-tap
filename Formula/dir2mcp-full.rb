@@ -6,7 +6,7 @@ class Dir2mcpFull < Formula
   homepage "https://github.com/dirstral/dir2mcp"
   version "0.6.1"
   license "MIT"
-  revision 1
+  revision 2
 
   depends_on "rust" => :build
   depends_on "python@3.12"

@@ -41,6 +41,8 @@ class Dir2mcpFull < Formula
     maturin==1.13.3
   CONS
 
+  DOCLING_PIP_REQUIREMENT = "pip>=25.3,<26"
+
   DOCLING_LOCK = <<~LOCK.freeze
     accelerate==1.13.0
     annotated-doc==0.0.4
@@ -241,7 +243,7 @@ class Dir2mcpFull < Formula
     # before the environment is created even though `python -m venv` works.
     system python, "-m", "venv", venv_dir
     venv_python = venv_dir/"bin/python"
-    system venv_python, "-m", "pip", "install", "--upgrade", "pip"
+    system venv_python, "-m", "pip", "install", DOCLING_PIP_REQUIREMENT
     # Install the fully pinned tree from the embedded lock so the resolved
     # versions never drift between installs.
     lock_file = buildpath/"docling-lock.txt"

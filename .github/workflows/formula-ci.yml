@@ -12,21 +12,29 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@main
+        # Pinned to a commit SHA (supply-chain hardening); bump deliberately.
+        uses: Homebrew/actions/setup-homebrew@2ebcf16054461267868620b1414507f3ccc765c1 # master @ 2026-06-05
         continue-on-error: true
 
       - name: Tap local checkout
         run: |
           brew untap dirstral/tap || true
-          brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+          brew tap dirstral/tap "$GITHUB_WORKSPACE"
           # Homebrew now refuses to load formulae from non-official taps
-          # unless they are explicitly trusted. This is our own tap under
-          # test, so trust it so audit/install can load the formulae.
-          brew trust dirstral/tap
+          # unless they are explicitly trusted. Older runner images may not
+          # have `brew trust` yet, so fall back to disabling the requirement
+          # for the rest of the job on those images.
+          if brew help trust >/dev/null 2>&1; then
+            brew trust dirstral/tap
+          else
+            echo "HOMEBREW_NO_REQUIRE_TAP_TRUST=1" >> "$GITHUB_ENV"
+          fi
 
       - name: Verify full-formula bootstrap invariant
         run: |
           grep -nE -- '-m".*"venv"|" -m ", "venv"|"-m", "venv"' Formula/dir2mcp-full.rb
+          grep -n 'depends_on "expat"' Formula/dir2mcp-full.rb
+          grep -n 'install_venv_pyexpat_shim!(python, venv_dir)' Formula/dir2mcp-full.rb
           if grep -nE -- 'system .*"venv".*uv|system .*uv.*"venv"|Formula\["uv"\].*"venv"|opt_bin/"uv".*"venv"' Formula/dir2mcp-full.rb; then
             echo "dir2mcp-full must not bootstrap its venv with uv"
             exit 1
@@ -51,18 +59,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@main
-        continue-on-error: true
-
       - name: Tap local checkout
         run: |
           brew untap dirstral/tap || true
-          brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+          brew tap dirstral/tap "$GITHUB_WORKSPACE"
           # Homebrew now refuses to load formulae from non-official taps
-          # unless they are explicitly trusted. This is our own tap under
-          # test, so trust it so audit/install can load the formulae.
-          brew trust dirstral/tap
+          # unless they are explicitly trusted. Older runner images may not
+          # have `brew trust` yet, so fall back to disabling the requirement
+          # for the rest of the job on those images.
+          if brew help trust >/dev/null 2>&1; then
+            brew trust dirstral/tap
+          else
+            echo "HOMEBREW_NO_REQUIRE_TAP_TRUST=1" >> "$GITHUB_ENV"
+          fi
 
       - name: Install formula
         run: |
@@ -94,17 +103,23 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@main
+        # Pinned to a commit SHA (supply-chain hardening); bump deliberately.
+        uses: Homebrew/actions/setup-homebrew@2ebcf16054461267868620b1414507f3ccc765c1 # master @ 2026-06-05
         continue-on-error: true
 
       - name: Tap local checkout
         run: |
           brew untap dirstral/tap || true
-          brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+          brew tap dirstral/tap "$GITHUB_WORKSPACE"
           # Homebrew now refuses to load formulae from non-official taps
-          # unless they are explicitly trusted. This is our own tap under
-          # test, so trust it so audit/install can load the formulae.
-          brew trust dirstral/tap
+          # unless they are explicitly trusted. Older runner images may not
+          # have `brew trust` yet, so fall back to disabling the requirement
+          # for the rest of the job on those images.
+          if brew help trust >/dev/null 2>&1; then
+            brew trust dirstral/tap
+          else
+            echo "HOMEBREW_NO_REQUIRE_TAP_TRUST=1" >> "$GITHUB_ENV"
+          fi
 
       - name: Install formula
         run: |

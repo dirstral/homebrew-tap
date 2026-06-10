@@ -11,14 +11,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Homebrew
+        if: runner.os == 'Linux'
+        uses: Homebrew/actions/setup-homebrew@main
+        continue-on-error: true
+
       - name: Tap local checkout
         run: |
           brew untap dirstral/tap || true
-          brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+          brew tap dirstral/tap "$GITHUB_WORKSPACE"
           # Homebrew now refuses to load formulae from non-official taps
-          # unless they are explicitly trusted. This is our own tap under
-          # test, so trust it so audit/install can load the formulae.
-          brew trust dirstral/tap
+          # unless they are explicitly trusted. Older runner images may not
+          # have `brew trust` yet, so fall back to disabling the requirement
+          # for the rest of the job on those images.
+          if brew help trust >/dev/null 2>&1; then
+            brew trust dirstral/tap
+          else
+            echo "HOMEBREW_NO_REQUIRE_TAP_TRUST=1" >> "$GITHUB_ENV"
+          fi
 
       - name: Verify full-formula bootstrap invariant
         run: |
@@ -52,11 +62,16 @@ jobs:
       - name: Tap local checkout
         run: |
           brew untap dirstral/tap || true
-          brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+          brew tap dirstral/tap "$GITHUB_WORKSPACE"
           # Homebrew now refuses to load formulae from non-official taps
-          # unless they are explicitly trusted. This is our own tap under
-          # test, so trust it so audit/install can load the formulae.
-          brew trust dirstral/tap
+          # unless they are explicitly trusted. Older runner images may not
+          # have `brew trust` yet, so fall back to disabling the requirement
+          # for the rest of the job on those images.
+          if brew help trust >/dev/null 2>&1; then
+            brew trust dirstral/tap
+          else
+            echo "HOMEBREW_NO_REQUIRE_TAP_TRUST=1" >> "$GITHUB_ENV"
+          fi
 
       - name: Install formula
         run: |
@@ -87,14 +102,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Homebrew
+        if: runner.os == 'Linux'
+        uses: Homebrew/actions/setup-homebrew@main
+        continue-on-error: true
+
       - name: Tap local checkout
         run: |
           brew untap dirstral/tap || true
-          brew tap --custom-remote dirstral/tap "$GITHUB_WORKSPACE"
+          brew tap dirstral/tap "$GITHUB_WORKSPACE"
           # Homebrew now refuses to load formulae from non-official taps
-          # unless they are explicitly trusted. This is our own tap under
-          # test, so trust it so audit/install can load the formulae.
-          brew trust dirstral/tap
+          # unless they are explicitly trusted. Older runner images may not
+          # have `brew trust` yet, so fall back to disabling the requirement
+          # for the rest of the job on those images.
+          if brew help trust >/dev/null 2>&1; then
+            brew trust dirstral/tap
+          else
+            echo "HOMEBREW_NO_REQUIRE_TAP_TRUST=1" >> "$GITHUB_ENV"
+          fi
 
       - name: Install formula
         run: |

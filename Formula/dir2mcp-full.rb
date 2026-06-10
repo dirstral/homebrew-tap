@@ -10,9 +10,6 @@ class Dir2mcpFull < Formula
 
   depends_on "rust" => :build
   depends_on "python@3.12"
-  on_macos do
-    depends_on "expat"
-  end
 
   DOCLING_VERSION = "2.92.0"
 
@@ -165,6 +162,10 @@ class Dir2mcpFull < Formula
   LOCK
 
   on_macos do
+    # pyexpat in some Homebrew python@3.12 bottles links against the system
+    # libexpat; install_venv_pyexpat_shim! retargets a venv-local copy at this.
+    depends_on "expat"
+
     if Hardware::CPU.intel?
       url "https://github.com/dirstral/dir2mcp/releases/download/v0.6.1/dir2mcp_0.6.1_darwin_amd64.tar.gz"
       sha256 "3a318e16bb454dfc79cd2b13f328a22130bbc4645d3fb1856ae380aae1f1115d"
@@ -310,7 +311,9 @@ class Dir2mcpFull < Formula
     host_pyexpat = Utils.safe_popen_read(
       python,
       "-c",
-      'import pathlib, sysconfig; print(pathlib.Path(sysconfig.get_config_var("DESTSHARED")) / "pyexpat.cpython-312-darwin.so")'
+      "import pathlib, sysconfig; " \
+      'd = sysconfig.get_config_var("DESTSHARED"); ' \
+      'print(pathlib.Path(d) / "pyexpat.cpython-312-darwin.so")',
     ).strip
     return if host_pyexpat.empty?
     return unless File.exist?(host_pyexpat)
@@ -327,11 +330,11 @@ class Dir2mcpFull < Formula
     shim_pyexpat = shim_dir/File.basename(host_pyexpat)
     cp host_pyexpat, shim_pyexpat
 
-    system "install_name_tool",
-           "-change",
-           "/usr/lib/libexpat.1.dylib",
-           expat_dylib,
-           shim_pyexpat
+    MachO::Tools.change_install_name(
+      shim_pyexpat.to_s,
+      "/usr/lib/libexpat.1.dylib",
+      expat_dylib.to_s,
+    )
     system "codesign", "--force", "--sign", "-", shim_pyexpat
 
     (site_packages/"sitecustomize.py").write <<~PY

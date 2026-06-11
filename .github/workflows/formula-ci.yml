@@ -136,17 +136,9 @@ jobs:
           SP="$VENV"/lib/python3.12/site-packages
           echo "--- everything matching *spatialindex* ---"
           find "$SP" -iname '*spatialindex*' -printf '%p\n' || true
-          "$VENV"/bin/python - <<'PY' 2>&1 || true
-          import pathlib, inspect, rtree
-          d = pathlib.Path(rtree.__file__).parent
-          print("rtree pkg dir:", d)
-          print("rtree dir:", sorted(p.name for p in d.iterdir()))
-          libs = d.parent / "rtree.libs"
-          print("rtree.libs:", sorted(p.name for p in libs.iterdir()) if libs.exists() else "MISSING")
-          import rtree.finder as f
-          print("=== finder.load source ===")
-          print(inspect.getsource(f.load))
-          PY
+          echo "--- rtree/ ---"; ls -la "$SP/rtree" || true
+          echo "--- rtree.libs/ ---"; ls -la "$SP/rtree.libs" || true
+          echo "--- rtree/finder.py ---"; sed -n '1,140p' "$SP/rtree/finder.py" || true
 
       - name: Docling smoke (full only)
         if: matrix.formula == 'dir2mcp-full'

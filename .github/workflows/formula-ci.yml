@@ -134,20 +134,19 @@ jobs:
         run: |
           VENV="$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv
           SP="$VENV"/lib/python3.12/site-packages
-          echo "--- all libspatialindex* under site-packages ---"
-          find "$SP" -iname 'libspatialindex*' -printf '%p\n' || true
-          echo "--- rtree dir layout ---"
-          ls -la "$SP/rtree" 2>/dev/null || true
-          ls -la "$SP/rtree/lib" 2>/dev/null || echo "(no rtree/lib)"
-          ls -la "$SP"/*.libs 2>/dev/null || echo "(no *.libs)"
-          SO=$(find "$SP" -iname 'libspatialindex_c*.so*' | head -1)
-          echo "--- libspatialindex_c: $SO ---"
-          if [ -n "$SO" ]; then
-            readelf -d "$SO" 2>/dev/null | grep -iE 'RPATH|RUNPATH|NEEDED' || true
-            ldd "$SO" 2>&1 || true
-          fi
-          echo "--- rtree finder env knobs ---"
-          "$VENV"/bin/python -c "import rtree, os; print('rtree', rtree.__file__)" 2>&1 || true
+          echo "--- everything matching *spatialindex* ---"
+          find "$SP" -iname '*spatialindex*' -printf '%p\n' || true
+          "$VENV"/bin/python - <<'PY' 2>&1 || true
+          import pathlib, inspect, rtree
+          d = pathlib.Path(rtree.__file__).parent
+          print("rtree pkg dir:", d)
+          print("rtree dir:", sorted(p.name for p in d.iterdir()))
+          libs = d.parent / "rtree.libs"
+          print("rtree.libs:", sorted(p.name for p in libs.iterdir()) if libs.exists() else "MISSING")
+          import rtree.finder as f
+          print("=== finder.load source ===")
+          print(inspect.getsource(f.load))
+          PY
 
       - name: Docling smoke (full only)
         if: matrix.formula == 'dir2mcp-full'

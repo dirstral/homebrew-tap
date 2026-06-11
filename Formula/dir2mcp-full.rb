@@ -188,9 +188,11 @@ class Dir2mcpFull < Formula
   end
 
   on_linux do
-    # post_install runs patchelf to restore $ORIGIN rpath on bundled wheel libs
-    # (rtree/libspatialindex) that keg relocation strips.
+    # patchelf (build): post_install re-asserts $ORIGIN rpath on bundled wheel
+    # libs that keg relocation strips. libspatialindex (runtime): the rtree wheel
+    # lacks libspatialindex_c, which post_install symlinks in from this formula.
     depends_on "patchelf" => :build
+    depends_on "libspatialindex"
 
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
       url "https://github.com/dirstral/dir2mcp/releases/download/v0.6.1/dir2mcp_0.6.1_linux_amd64.tar.gz"
@@ -246,27 +248,42 @@ class Dir2mcpFull < Formula
     end
   end
 
-  # Linux: the analogue of the macOS torch fix (homebrew-tap#22). Keg relocation
-  # strips the `$ORIGIN` rpath from auditwheel-vendored shared libraries, so a
-  # bundled lib can no longer find its sibling — e.g. rtree's `libspatialindex_c`
-  # fails to load `libspatialindex` ("Could not load libspatialindex_c library")
-  # and docling crashes at import. Re-assert `$ORIGIN` on the vendored libs so
-  # each finds its siblings in the same directory.
+  # Linux docling repair (homebrew-tap#22). Two distinct problems:
+  #
+  # 1. The rtree wheel ships only the C++ core (`rtree.libs/libspatialindex-*.so`)
+  #    — there is no `libspatialindex_c.so`, the C-API library rtree's finder
+  #    actually dlopens — so docling crashes with "Could not load libspatialindex_c
+  #    library". Provide it from the `libspatialindex` formula by symlinking into
+  #    `rtree/lib`, which rtree's finder searches.
+  # 2. Keg relocation can strip the `$ORIGIN` rpath from auditwheel-vendored libs
+  #    so a bundled lib can't find its sibling; re-assert `$ORIGIN` defensively.
   def repair_linux_native_libs!
     site = libexec/"docling-venv/lib/python3.12/site-packages"
     return unless site.directory?
 
+    provide_libspatialindex_c!(site)
+
     patchelf = Formula["patchelf"].opt_bin/"patchelf"
-    # Known offender first (rtree), then any other auditwheel-vendored *.libs/.
-    globs = [
-      site/"**/libspatialindex*.so*",
-      site/"*.libs/*.so*",
-    ]
-    globs.each do |glob|
-      Pathname.glob(glob).each do |so|
-        system patchelf, "--set-rpath", "$ORIGIN", so.to_s
-      end
+    Pathname.glob(site/"*.libs/*.so*").each do |so|
+      system patchelf, "--set-rpath", "$ORIGIN", so.to_s
     end
+  end
+
+  # Symlink the libspatialindex C-API library into rtree/lib so rtree's finder
+  # (which looks for `libspatialindex_c.so` in `rtree/lib`, `rtree/`, and
+  # $SPATIALINDEX_C_LIBRARY) can load it. The keg-provided lib carries its own
+  # rpath to its sibling libspatialindex, so ctypes resolves the dependency.
+  def provide_libspatialindex_c!(site)
+    rtree_lib = site/"rtree/lib"
+    return unless (site/"rtree").directory?
+
+    src = Formula["libspatialindex"].opt_lib/shared_library("libspatialindex_c")
+    return unless src.exist?
+
+    rtree_lib.mkpath
+    target = rtree_lib/"libspatialindex_c.so"
+    target.unlink if target.exist? || target.symlink?
+    target.make_symlink(src)
   end
 
   def caveats

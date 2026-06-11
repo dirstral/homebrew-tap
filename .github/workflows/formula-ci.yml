@@ -129,17 +129,6 @@ jobs:
         run: |
           dir2mcp version
 
-      - name: Docling Linux diagnostics (full only, TEMP)
-        if: matrix.formula == 'dir2mcp-full'
-        run: |
-          VENV="$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv
-          SP="$VENV"/lib/python3.12/site-packages
-          echo "--- everything matching *spatialindex* ---"
-          find "$SP" -iname '*spatialindex*' -printf '%p\n' || true
-          echo "--- rtree/ ---"; ls -la "$SP/rtree" || true
-          echo "--- rtree.libs/ ---"; ls -la "$SP/rtree.libs" || true
-          echo "--- rtree/finder.py ---"; sed -n '1,140p' "$SP/rtree/finder.py" || true
-
       - name: Docling smoke (full only)
         if: matrix.formula == 'dir2mcp-full'
         run: |

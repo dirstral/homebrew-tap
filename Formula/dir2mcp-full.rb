@@ -5,9 +5,7 @@ class Dir2mcpFull < Formula
   desc "Deploy local directories as an MCP server with bundled Docling runtime"
   homepage "https://github.com/dirstral/dir2mcp"
   version "0.7.0"
-  # revision 3: Linux post_install rtree/libspatialindex rpath fix (homebrew-tap#22)
   license "MIT"
-  revision 3
 
   depends_on "rust" => :build
   depends_on "python@3.12"

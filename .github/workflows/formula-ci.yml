@@ -132,9 +132,7 @@ jobs:
       - name: Docling smoke (full only)
         if: matrix.formula == 'dir2mcp-full'
         run: |
-          # TODO(#22): run `docling --version` here too once the Linux
-          # native-lib linkage is fixed (rtree/libspatialindex fails to load in
-          # the relocated keg, the Linux analogue of the macOS torch fix). For
-          # now only assert the binary exists; the dir2mcp functional check
-          # detects a broken Linux venv at runtime and falls back to Mistral OCR.
-          test -x "$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling
+          # Actually run docling (imports rtree/libspatialindex etc.), not just
+          # check the file exists, so an ABI/linkage-broken venv fails CI. The
+          # Linux post_install rpath fix (homebrew-tap#22) is what makes this pass.
+          "$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling --version

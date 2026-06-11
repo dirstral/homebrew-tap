@@ -5,8 +5,9 @@ class Dir2mcpFull < Formula
   desc "Deploy local directories as an MCP server with bundled Docling runtime"
   homepage "https://github.com/dirstral/dir2mcp"
   version "0.6.1"
+  # revision 3: Linux post_install rtree/libspatialindex rpath fix (homebrew-tap#22)
   license "MIT"
-  revision 2
+  revision 3
 
   depends_on "rust" => :build
   depends_on "python@3.12"
@@ -187,6 +188,12 @@ class Dir2mcpFull < Formula
   end
 
   on_linux do
+    # patchelf (build): post_install re-asserts $ORIGIN rpath on bundled wheel
+    # libs that keg relocation strips. spatialindex (runtime): the rtree wheel
+    # lacks libspatialindex_c, which post_install symlinks in from this formula.
+    depends_on "patchelf" => :build
+    depends_on "spatialindex"
+
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
       url "https://github.com/dirstral/dir2mcp/releases/download/v0.6.1/dir2mcp_0.6.1_linux_amd64.tar.gz"
       sha256 "8cb7d8deba0770c4a8cf608c18e3279f46ee79f7025e31502bb12b8ce3a98f63"
@@ -212,8 +219,19 @@ class Dir2mcpFull < Formula
   # running the previous binary after `brew upgrade dir2mcp-full` until
   # the cache is cleared.
   def post_install
-    return unless OS.mac?
+    if OS.mac?
+      repair_macos_torch_linkage!
+    elsif OS.linux?
+      repair_linux_native_libs!
+    end
+  end
 
+  # macOS: keg relocation rewrites the prebuilt torch dylibs' IDs from
+  # `@rpath/<name>` to absolute Cellar paths and strips `@loader_path`, so
+  # torchvision loads a second libtorch and its ops never register
+  # ("operator torchvision::nms does not exist"). Restore `@rpath` IDs + the
+  # `@loader_path` rpath after relocation, then re-sign.
+  def repair_macos_torch_linkage!
     torch_lib = libexec/"docling-venv/lib/python3.12/site-packages/torch/lib"
     return unless torch_lib.directory?
 
@@ -228,6 +246,44 @@ class Dir2mcpFull < Formula
       end
       system "codesign", "--force", "--sign", "-", dylib
     end
+  end
+
+  # Linux docling repair (homebrew-tap#22). Two distinct problems:
+  #
+  # 1. The rtree wheel ships only the C++ core (`rtree.libs/libspatialindex-*.so`)
+  #    — there is no `libspatialindex_c.so`, the C-API library rtree's finder
+  #    actually dlopens — so docling crashes with "Could not load libspatialindex_c
+  #    library". Provide it from the `libspatialindex` formula by symlinking into
+  #    `rtree/lib`, which rtree's finder searches.
+  # 2. Keg relocation can strip the `$ORIGIN` rpath from auditwheel-vendored libs
+  #    so a bundled lib can't find its sibling; re-assert `$ORIGIN` defensively.
+  def repair_linux_native_libs!
+    site = libexec/"docling-venv/lib/python3.12/site-packages"
+    return unless site.directory?
+
+    provide_libspatialindex_c!(site)
+
+    patchelf = Formula["patchelf"].opt_bin/"patchelf"
+    Pathname.glob(site/"*.libs/*.so*").each do |so|
+      system patchelf, "--set-rpath", "$ORIGIN", so.to_s
+    end
+  end
+
+  # Symlink the libspatialindex C-API library into rtree/lib so rtree's finder
+  # (which looks for `libspatialindex_c.so` in `rtree/lib`, `rtree/`, and
+  # $SPATIALINDEX_C_LIBRARY) can load it. The keg-provided lib carries its own
+  # rpath to its sibling libspatialindex, so ctypes resolves the dependency.
+  def provide_libspatialindex_c!(site)
+    rtree_lib = site/"rtree/lib"
+    return unless (site/"rtree").directory?
+
+    src = Formula["spatialindex"].opt_lib/shared_library("libspatialindex_c")
+    return unless src.exist?
+
+    rtree_lib.mkpath
+    target = rtree_lib/"libspatialindex_c.so"
+    target.unlink if target.exist? || target.symlink?
+    target.make_symlink(src)
   end
 
   def caveats

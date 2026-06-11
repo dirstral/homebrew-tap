@@ -5,8 +5,9 @@ class Dir2mcpFull < Formula
   desc "Deploy local directories as an MCP server with bundled Docling runtime"
   homepage "https://github.com/dirstral/dir2mcp"
   version "0.6.1"
+  # revision 3: Linux post_install rtree/libspatialindex rpath fix (homebrew-tap#22)
   license "MIT"
-  revision 2
+  revision 3
 
   depends_on "rust" => :build
   depends_on "python@3.12"
@@ -187,6 +188,10 @@ class Dir2mcpFull < Formula
   end
 
   on_linux do
+    # post_install runs patchelf to restore $ORIGIN rpath on bundled wheel libs
+    # (rtree/libspatialindex) that keg relocation strips.
+    depends_on "patchelf" => :build
+
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
       url "https://github.com/dirstral/dir2mcp/releases/download/v0.6.1/dir2mcp_0.6.1_linux_amd64.tar.gz"
       sha256 "8cb7d8deba0770c4a8cf608c18e3279f46ee79f7025e31502bb12b8ce3a98f63"
@@ -212,8 +217,19 @@ class Dir2mcpFull < Formula
   # running the previous binary after `brew upgrade dir2mcp-full` until
   # the cache is cleared.
   def post_install
-    return unless OS.mac?
+    if OS.mac?
+      repair_macos_torch_linkage!
+    elsif OS.linux?
+      repair_linux_native_libs!
+    end
+  end
 
+  # macOS: keg relocation rewrites the prebuilt torch dylibs' IDs from
+  # `@rpath/<name>` to absolute Cellar paths and strips `@loader_path`, so
+  # torchvision loads a second libtorch and its ops never register
+  # ("operator torchvision::nms does not exist"). Restore `@rpath` IDs + the
+  # `@loader_path` rpath after relocation, then re-sign.
+  def repair_macos_torch_linkage!
     torch_lib = libexec/"docling-venv/lib/python3.12/site-packages/torch/lib"
     return unless torch_lib.directory?
 
@@ -227,6 +243,29 @@ class Dir2mcpFull < Formula
         MachO::Tools.add_rpath(dylib.to_s, "@loader_path")
       end
       system "codesign", "--force", "--sign", "-", dylib
+    end
+  end
+
+  # Linux: the analogue of the macOS torch fix (homebrew-tap#22). Keg relocation
+  # strips the `$ORIGIN` rpath from auditwheel-vendored shared libraries, so a
+  # bundled lib can no longer find its sibling — e.g. rtree's `libspatialindex_c`
+  # fails to load `libspatialindex` ("Could not load libspatialindex_c library")
+  # and docling crashes at import. Re-assert `$ORIGIN` on the vendored libs so
+  # each finds its siblings in the same directory.
+  def repair_linux_native_libs!
+    site = libexec/"docling-venv/lib/python3.12/site-packages"
+    return unless site.directory?
+
+    patchelf = Formula["patchelf"].opt_bin/"patchelf"
+    # Known offender first (rtree), then any other auditwheel-vendored *.libs/.
+    globs = [
+      site/"**/libspatialindex*.so*",
+      site/"*.libs/*.so*",
+    ]
+    globs.each do |glob|
+      Pathname.glob(glob).each do |so|
+        system patchelf, "--set-rpath", "$ORIGIN", so.to_s
+      end
     end
   end
 

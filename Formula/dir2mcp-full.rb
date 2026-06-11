@@ -189,10 +189,10 @@ class Dir2mcpFull < Formula
 
   on_linux do
     # patchelf (build): post_install re-asserts $ORIGIN rpath on bundled wheel
-    # libs that keg relocation strips. libspatialindex (runtime): the rtree wheel
+    # libs that keg relocation strips. spatialindex (runtime): the rtree wheel
     # lacks libspatialindex_c, which post_install symlinks in from this formula.
     depends_on "patchelf" => :build
-    depends_on "libspatialindex"
+    depends_on "spatialindex"
 
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
       url "https://github.com/dirstral/dir2mcp/releases/download/v0.6.1/dir2mcp_0.6.1_linux_amd64.tar.gz"
@@ -277,7 +277,7 @@ class Dir2mcpFull < Formula
     rtree_lib = site/"rtree/lib"
     return unless (site/"rtree").directory?
 
-    src = Formula["libspatialindex"].opt_lib/shared_library("libspatialindex_c")
+    src = Formula["spatialindex"].opt_lib/shared_library("libspatialindex_c")
     return unless src.exist?
 
     rtree_lib.mkpath

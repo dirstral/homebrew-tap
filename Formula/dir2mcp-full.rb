@@ -4,7 +4,7 @@
 class Dir2mcpFull < Formula
   desc "Deploy local directories as an MCP server with bundled Docling runtime"
   homepage "https://github.com/dirstral/dir2mcp"
-  version "0.7.0"
+  version "0.8.0"
   license "MIT"
 
   depends_on "rust" => :build
@@ -166,8 +166,8 @@ class Dir2mcpFull < Formula
     depends_on "expat"
 
     if Hardware::CPU.intel?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.7.0/dir2mcp_0.7.0_darwin_amd64.tar.gz"
-      sha256 "4202d0bc06b7d064cc19ddde307e24c0e9721ae6b273440cc73e2ee01d3aa8b0"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.8.0/dir2mcp_0.8.0_darwin_amd64.tar.gz"
+      sha256 "70a29d6196a12addcf50e6c41322c801132a17e5890dc90a9c5eada6794f075e"
 
       define_method(:install) do
         libexec.install "dir2mcp"
@@ -175,8 +175,8 @@ class Dir2mcpFull < Formula
       end
     end
     if Hardware::CPU.arm?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.7.0/dir2mcp_0.7.0_darwin_arm64.tar.gz"
-      sha256 "b0840100eb9ba495b82c0b3df2cb3cbe4e71fe3254c5e9323d5001e4ba08f76d"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.8.0/dir2mcp_0.8.0_darwin_arm64.tar.gz"
+      sha256 "7b64adc2421d0420f7c8e3d9e4e3021e6bc9b0848de0faa02383ae6e0de1ffba"
 
       define_method(:install) do
         libexec.install "dir2mcp"
@@ -193,16 +193,16 @@ class Dir2mcpFull < Formula
     depends_on "spatialindex"
 
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.7.0/dir2mcp_0.7.0_linux_amd64.tar.gz"
-      sha256 "86b66afc2e19d769a5ec2a8ce5280017bea286eb1ce7862a7797a8f09ac5f22c"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.8.0/dir2mcp_0.8.0_linux_amd64.tar.gz"
+      sha256 "15058cad4cf5beed27e8fd3919f367d379430b6a0d6ccac40705a90f6a5def17"
       define_method(:install) do
         libexec.install "dir2mcp"
         install_docling_runtime
       end
     end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.7.0/dir2mcp_0.7.0_linux_arm64.tar.gz"
-      sha256 "b4fc2bce4e51fe9193db20e54940cd70b8495442af2fb31b0255806b95a41918"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.8.0/dir2mcp_0.8.0_linux_arm64.tar.gz"
+      sha256 "0300eb3ce079e7787ac289fa9b0475a4da5a3770f29ee6932768ebba2ebb2fa3"
       define_method(:install) do
         libexec.install "dir2mcp"
         install_docling_runtime

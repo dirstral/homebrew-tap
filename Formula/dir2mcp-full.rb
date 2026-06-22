@@ -261,7 +261,8 @@ class Dir2mcpFull < Formula
 
     provide_libspatialindex_c!(site)
 
-    patchelf = formula_opt_bin("patchelf")/"patchelf"
+    patchelf = Formula["patchelf"].opt_bin/"patchelf"
+
     Pathname.glob(site/"*.libs/*.so*").each do |so|
       system patchelf, "--set-rpath", "$ORIGIN", so.to_s
     end
@@ -275,7 +276,8 @@ class Dir2mcpFull < Formula
     rtree_lib = site/"rtree/lib"
     return unless (site/"rtree").directory?
 
-    src = formula_opt_lib("spatialindex")/shared_library("libspatialindex_c")
+    src = Formula["spatialindex"].opt_lib/shared_library("libspatialindex_c")
+
     return unless src.exist?
 
     rtree_lib.mkpath
@@ -293,7 +295,7 @@ class Dir2mcpFull < Formula
   end
 
   def install_docling_runtime
-    python = formula_opt_bin("python@3.12")/"python3.12"
+    python = Formula["python@3.12"].opt_bin/"python3.12"
     venv_dir = libexec/"docling-venv"
     # Use CPython's stdlib venv bootstrap directly instead of `uv venv`.
     # Some Homebrew python@3.12 bottles on newer macOS releases return an
@@ -375,7 +377,8 @@ class Dir2mcpFull < Formula
     linked = Utils.safe_popen_read("otool", "-L", host_pyexpat)
     return unless linked.include?("/usr/lib/libexpat.1.dylib")
 
-    expat_dylib = formula_opt_lib("expat")/"libexpat.1.dylib"
+    expat_dylib = Formula["expat"].opt_lib/"libexpat.1.dylib"
+
     return unless expat_dylib.exist?
 
     site_packages = venv_dir/"lib/python3.12/site-packages"

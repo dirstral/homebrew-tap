@@ -59,6 +59,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Homebrew
+        # Pinned to a commit SHA (supply-chain hardening); bump deliberately.
+        uses: Homebrew/actions/setup-homebrew@2ebcf16054461267868620b1414507f3ccc765c1 # master @ 2026-06-05
+        continue-on-error: true
+
       - name: Tap local checkout
         run: |
           brew untap dirstral/tap || true

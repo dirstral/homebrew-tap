@@ -1,8 +1,0 @@
-# Homebrew/FormulaPathMethods recommends formula_opt_bin/formula_opt_lib, but
-# those helpers are NOT present on the stock Homebrew preinstalled on the macOS
-# CI runners (and on older client brews) — they raise NoMethodError at install
-# time. Formula["x"].opt_bin works on every Homebrew version, so we keep it and
-# disable this cop tap-wide. (An in-source `# rubocop:disable` is itself rejected
-# by Homebrew's Style/DisableCopsWithinSourceCodeDirective, so config it here.)
-Homebrew/FormulaPathMethods:
-  Enabled: false

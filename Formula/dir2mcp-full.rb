@@ -439,6 +439,14 @@ class Dir2mcpFull < Formula
       "@loader_path/libtheoradec.1.dylib" => formula_opt_lib("theora")/"libtheoradec.dylib",
       "@loader_path/libb2.1.dylib"        => formula_opt_lib("libb2")/"libb2.1.dylib",
     }
+    # change_install_name does not verify the destination exists, and the bundled
+    # copies are deleted unconditionally below — so a missing target would yield a
+    # dangling load command and a silently broken cv2 at runtime. Fail loudly here
+    # instead (the theora/libb2 deps guarantee these, but a future keg layout
+    # change should break the build, not ship a broken import).
+    missing = repoints.values.reject(&:exist?)
+    odie "cv2 repoint targets missing (theora/libb2 keg layout changed?): #{missing.join(", ")}" if missing.any?
+
     Pathname.glob(cv2_dylibs/"*.dylib").each do |dylib|
       linked = MachO::Tools.dylibs(dylib.to_s)
       changed = false

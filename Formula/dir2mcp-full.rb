@@ -6,6 +6,12 @@ class Dir2mcpFull < Formula
   homepage "https://github.com/dirstral/dir2mcp"
   version "0.9.4"
   license "MIT"
+  # Formula-only rebuild (no upstream version change): bumps the docling venv's
+  # transformers 4.46.3 -> 4.49.0 so docling's rt_detr_v2 layout model loads.
+  # 4.46.3 crashed on every PDF ("model type `rt_detr_v2` … Transformers … out
+  # of date"), so docling produced nothing and the index never embedded. See
+  # dirstral/dir2mcp#371.
+  revision 1
 
   depends_on "rust" => :build
   depends_on "python@3.12"
@@ -23,11 +29,16 @@ class Dir2mcpFull < Formula
   # the four top-level packages still let transitive releases drift, so
   # install reliability decayed as new wheels landed on PyPI.
   #
+  # transformers must stay in [4.49, 5.0): docling-ibm-models' layout model is a
+  # `rt_detr_v2` checkpoint, first recognized in transformers 4.49 (4.46.3
+  # crashed on every PDF), while 5.x moves the AutoProcessor import path docling
+  # 2.92.0 uses. tokenizers is pinned to match (transformers 4.49 needs >=0.21).
+  #
   # DOCLING_LOCK freezes the **entire** transitive tree (markers included for
   # Linux CUDA wheels), so every install produces the same known-good
   # environment regardless of when it runs. Regenerate when bumping
   # DOCLING_VERSION:
-  #   printf 'torch==2.5.1\ntorchvision==0.20.1\ntransformers==4.46.3\ndocling==<new>\n' > in.txt
+  #   printf 'torch==2.5.1\ntorchvision==0.20.1\ntransformers==4.49.0\ndocling==<new>\n' > in.txt
   #   uv pip compile --universal --python-version 3.12 --no-annotate --no-header in.txt
   # then re-verify `docling --version` in the built venv.
   # Build-time backend for the macOS-ARM source builds of pydantic-core and
@@ -140,11 +151,11 @@ class Dir2mcpFull < Formula
     soupsieve==2.8.4
     sympy==1.13.1
     tabulate==0.10.0
-    tokenizers==0.20.3
+    tokenizers==0.21.4
     torch==2.5.1
     torchvision==0.20.1
     tqdm==4.68.2
-    transformers==4.46.3
+    transformers==4.49.0
     tree-sitter==0.25.2
     tree-sitter-c==0.24.2
     tree-sitter-javascript==0.25.0
@@ -420,5 +431,15 @@ class Dir2mcpFull < Formula
     # Exercise the docling runtime (imports torch/torchvision/transformers), not
     # just --help, so an ABI-broken venv fails the test instead of shipping.
     assert_match "Docling version", shell_output("#{libexec}/docling-venv/bin/docling --version 2>&1")
+    # Guard the dirstral/dir2mcp#371 regression deterministically (no model
+    # download / inference): docling's layout model is an rt_detr_v2 checkpoint,
+    # so the pinned transformers MUST recognize that architecture. transformers
+    # 4.46.3 did not -> docling crashed on every PDF. Far cheaper and less flaky
+    # than a full conversion, while still catching a too-old transformers pin.
+    assert_equal "ok", shell_output(
+      "#{libexec}/docling-venv/bin/python -c " \
+      "'from transformers.models.auto.configuration_auto import CONFIG_MAPPING_NAMES; " \
+      "print(\"ok\" if \"rt_detr_v2\" in CONFIG_MAPPING_NAMES else \"missing\")'",
+    ).strip
   end
 end

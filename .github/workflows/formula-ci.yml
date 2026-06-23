@@ -97,7 +97,10 @@ jobs:
           DOCLING="$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling
           "$DOCLING" --version
           out="$(mktemp -d)"
-          "$DOCLING" --to json --output "$out" .github/fixtures/smoke.pdf
+          # --device cpu: GitHub's headless macOS runners expose no usable GPU,
+          # so torch's default MPS (Metal) backend reports 0 bytes and OOMs;
+          # force CPU for the smoke. Real Macs keep the runtime default (auto).
+          "$DOCLING" --to json --device cpu --output "$out" .github/fixtures/smoke.pdf
           json="$(find "$out" -name '*.json' -type f | head -1)"
           if [ -z "$json" ] || [ ! -s "$json" ]; then
             echo "::error::docling produced no/empty output for smoke.pdf"; exit 1
@@ -156,7 +159,10 @@ jobs:
           DOCLING="$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling
           "$DOCLING" --version
           out="$(mktemp -d)"
-          "$DOCLING" --to json --output "$out" .github/fixtures/smoke.pdf
+          # --device cpu: GitHub's headless macOS runners expose no usable GPU,
+          # so torch's default MPS (Metal) backend reports 0 bytes and OOMs;
+          # force CPU for the smoke. Real Macs keep the runtime default (auto).
+          "$DOCLING" --to json --device cpu --output "$out" .github/fixtures/smoke.pdf
           json="$(find "$out" -name '*.json' -type f | head -1)"
           if [ -z "$json" ] || [ ! -s "$json" ]; then
             echo "::error::docling produced no/empty output for smoke.pdf"; exit 1

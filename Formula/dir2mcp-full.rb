@@ -175,6 +175,11 @@ class Dir2mcpFull < Formula
     # pyexpat in some Homebrew python@3.12 bottles links against the system
     # libexpat; install_venv_pyexpat_shim! retargets a venv-local copy at this.
     depends_on "expat"
+    # opencv (cv2) bundles ffmpeg/libarchive dylibs that link flat-namespace
+    # theora + libb2 copies; `brew audit` forbids those, so prune_problematic_cv2_dylibs!
+    # deletes them and repoints the consumers at these real deps (issue #371).
+    depends_on "libb2"
+    depends_on "theora"
 
     if Hardware::CPU.intel?
       url "https://github.com/dirstral/dir2mcp/releases/download/v0.9.4/dir2mcp_0.9.4_darwin_amd64.tar.gz"
@@ -420,6 +425,31 @@ class Dir2mcpFull < Formula
   def prune_problematic_cv2_dylibs!(venv_dir)
     cv2_dylibs = venv_dir/"lib/python3.12/site-packages/cv2/.dylibs"
     return unless cv2_dylibs.directory?
+
+    # opencv bundles ffmpeg/libarchive dylibs that hard-link flat-namespace
+    # theora + libb2 copies (libtheoraenc/dec, libb2) via @loader_path. `brew
+    # audit` rejects flat-namespace dylibs, so we delete the bundled copies — but
+    # deletion alone dangles those load commands and cv2 then fails to dlopen,
+    # which transformers>=4.49 imports eagerly (issue #371). Repoint the
+    # consumers at Homebrew's theora/libb2 (declared deps) and re-sign, THEN
+    # delete the bundled copies. theora is a video codec docling never invokes,
+    # so the libtheora .1->.2 soname skew is inert (symbols present, never called).
+    repoints = {
+      "@loader_path/libtheoraenc.1.dylib" => formula_opt_lib("theora")/"libtheoraenc.dylib",
+      "@loader_path/libtheoradec.1.dylib" => formula_opt_lib("theora")/"libtheoradec.dylib",
+      "@loader_path/libb2.1.dylib"        => formula_opt_lib("libb2")/"libb2.1.dylib",
+    }
+    Pathname.glob(cv2_dylibs/"*.dylib").each do |dylib|
+      linked = MachO::Tools.dylibs(dylib.to_s)
+      changed = false
+      repoints.each do |old_ref, new_ref|
+        next unless linked.include?(old_ref)
+
+        MachO::Tools.change_install_name(dylib.to_s, old_ref, new_ref.to_s)
+        changed = true
+      end
+      system "codesign", "--force", "--sign", "-", dylib if changed
+    end
 
     %w[libb2.1.dylib libtheoradec.1.dylib libtheoraenc.1.dylib].each do |name|
       (cv2_dylibs/name).delete if (cv2_dylibs/name).exist?

@@ -6,6 +6,12 @@ class Dir2mcpFull < Formula
   homepage "https://github.com/dirstral/dir2mcp"
   version "0.9.4"
   license "MIT"
+  # Formula-only rebuild (no upstream version change): bumps the docling venv's
+  # transformers 4.46.3 -> 4.49.0 so docling's rt_detr_v2 layout model loads.
+  # 4.46.3 crashed on every PDF ("model type `rt_detr_v2` … Transformers … out
+  # of date"), so docling produced nothing and the index never embedded. See
+  # dirstral/dir2mcp#371.
+  revision 1
 
   depends_on "rust" => :build
   depends_on "python@3.12"
@@ -23,11 +29,16 @@ class Dir2mcpFull < Formula
   # the four top-level packages still let transitive releases drift, so
   # install reliability decayed as new wheels landed on PyPI.
   #
+  # transformers must stay in [4.49, 5.0): docling-ibm-models' layout model is a
+  # `rt_detr_v2` checkpoint, first recognized in transformers 4.49 (4.46.3
+  # crashed on every PDF), while 5.x moves the AutoProcessor import path docling
+  # 2.92.0 uses. tokenizers is pinned to match (transformers 4.49 needs >=0.21).
+  #
   # DOCLING_LOCK freezes the **entire** transitive tree (markers included for
   # Linux CUDA wheels), so every install produces the same known-good
   # environment regardless of when it runs. Regenerate when bumping
   # DOCLING_VERSION:
-  #   printf 'torch==2.5.1\ntorchvision==0.20.1\ntransformers==4.46.3\ndocling==<new>\n' > in.txt
+  #   printf 'torch==2.5.1\ntorchvision==0.20.1\ntransformers==4.49.0\ndocling==<new>\n' > in.txt
   #   uv pip compile --universal --python-version 3.12 --no-annotate --no-header in.txt
   # then re-verify `docling --version` in the built venv.
   # Build-time backend for the macOS-ARM source builds of pydantic-core and
@@ -140,11 +151,11 @@ class Dir2mcpFull < Formula
     soupsieve==2.8.4
     sympy==1.13.1
     tabulate==0.10.0
-    tokenizers==0.20.3
+    tokenizers==0.21.4
     torch==2.5.1
     torchvision==0.20.1
     tqdm==4.68.2
-    transformers==4.46.3
+    transformers==4.49.0
     tree-sitter==0.25.2
     tree-sitter-c==0.24.2
     tree-sitter-javascript==0.25.0
@@ -164,6 +175,11 @@ class Dir2mcpFull < Formula
     # pyexpat in some Homebrew python@3.12 bottles links against the system
     # libexpat; install_venv_pyexpat_shim! retargets a venv-local copy at this.
     depends_on "expat"
+    # opencv (cv2) bundles ffmpeg/libarchive dylibs that link flat-namespace
+    # theora + libb2 copies; `brew audit` forbids those, so prune_problematic_cv2_dylibs!
+    # deletes them and repoints the consumers at these real deps (issue #371).
+    depends_on "libb2"
+    depends_on "theora"
 
     if Hardware::CPU.intel?
       url "https://github.com/dirstral/dir2mcp/releases/download/v0.9.4/dir2mcp_0.9.4_darwin_amd64.tar.gz"
@@ -410,6 +426,39 @@ class Dir2mcpFull < Formula
     cv2_dylibs = venv_dir/"lib/python3.12/site-packages/cv2/.dylibs"
     return unless cv2_dylibs.directory?
 
+    # opencv bundles ffmpeg/libarchive dylibs that hard-link flat-namespace
+    # theora + libb2 copies (libtheoraenc/dec, libb2) via @loader_path. `brew
+    # audit` rejects flat-namespace dylibs, so we delete the bundled copies — but
+    # deletion alone dangles those load commands and cv2 then fails to dlopen,
+    # which transformers>=4.49 imports eagerly (issue #371). Repoint the
+    # consumers at Homebrew's theora/libb2 (declared deps) and re-sign, THEN
+    # delete the bundled copies. theora is a video codec docling never invokes,
+    # so the libtheora .1->.2 soname skew is inert (symbols present, never called).
+    repoints = {
+      "@loader_path/libtheoraenc.1.dylib" => formula_opt_lib("theora")/"libtheoraenc.dylib",
+      "@loader_path/libtheoradec.1.dylib" => formula_opt_lib("theora")/"libtheoradec.dylib",
+      "@loader_path/libb2.1.dylib"        => formula_opt_lib("libb2")/"libb2.1.dylib",
+    }
+    # change_install_name does not verify the destination exists, and the bundled
+    # copies are deleted unconditionally below — so a missing target would yield a
+    # dangling load command and a silently broken cv2 at runtime. Fail loudly here
+    # instead (the theora/libb2 deps guarantee these, but a future keg layout
+    # change should break the build, not ship a broken import).
+    missing = repoints.values.reject(&:exist?)
+    odie "cv2 repoint targets missing (theora/libb2 keg layout changed?): #{missing.join(", ")}" if missing.any?
+
+    Pathname.glob(cv2_dylibs/"*.dylib").each do |dylib|
+      linked = MachO::Tools.dylibs(dylib.to_s)
+      changed = false
+      repoints.each do |old_ref, new_ref|
+        next unless linked.include?(old_ref)
+
+        MachO::Tools.change_install_name(dylib.to_s, old_ref, new_ref.to_s)
+        changed = true
+      end
+      system "codesign", "--force", "--sign", "-", dylib if changed
+    end
+
     %w[libb2.1.dylib libtheoradec.1.dylib libtheoraenc.1.dylib].each do |name|
       (cv2_dylibs/name).delete if (cv2_dylibs/name).exist?
     end
@@ -420,5 +469,15 @@ class Dir2mcpFull < Formula
     # Exercise the docling runtime (imports torch/torchvision/transformers), not
     # just --help, so an ABI-broken venv fails the test instead of shipping.
     assert_match "Docling version", shell_output("#{libexec}/docling-venv/bin/docling --version 2>&1")
+    # Guard the dirstral/dir2mcp#371 regression deterministically (no model
+    # download / inference): docling's layout model is an rt_detr_v2 checkpoint,
+    # so the pinned transformers MUST recognize that architecture. transformers
+    # 4.46.3 did not -> docling crashed on every PDF. Far cheaper and less flaky
+    # than a full conversion, while still catching a too-old transformers pin.
+    assert_equal "ok", shell_output(
+      "#{libexec}/docling-venv/bin/python -c " \
+      "'from transformers.models.auto.configuration_auto import CONFIG_MAPPING_NAMES; " \
+      "print(\"ok\" if \"rt_detr_v2\" in CONFIG_MAPPING_NAMES else \"missing\")'",
+    ).strip
   end
 end

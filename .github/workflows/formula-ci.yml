@@ -89,9 +89,20 @@ jobs:
       - name: Docling smoke (full only)
         if: matrix.formula == 'dir2mcp-full'
         run: |
-          # Actually run docling (imports torch/torchvision/transformers), not
-          # just check the file exists, so an ABI-broken venv fails CI.
-          "$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling --version
+          # --version imports torch/torchvision/transformers/cv2 (catches ABI &
+          # dylib breaks) but NEVER loads the layout model, so it cannot catch an
+          # out-of-date transformers (rt_detr_v2) or an empty-output break —
+          # exactly how those shipped. Also convert a tiny fixture PDF so a
+          # present-but-broken docling fails CI instead of shipping (dirstral/dir2mcp#372).
+          DOCLING="$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling
+          "$DOCLING" --version
+          out="$(mktemp -d)"
+          "$DOCLING" --to json --output "$out" .github/fixtures/smoke.pdf
+          json="$(find "$out" -name '*.json' -type f | head -1)"
+          if [ -z "$json" ] || [ ! -s "$json" ]; then
+            echo "::error::docling produced no/empty output for smoke.pdf"; exit 1
+          fi
+          echo "docling conversion smoke OK ($(wc -c < "$json") bytes)"
   install-linux:
     runs-on: ubuntu-latest
     # Homebrew's Linux build sandbox needs rootless Bubblewrap, which needs
@@ -137,7 +148,17 @@ jobs:
       - name: Docling smoke (full only)
         if: matrix.formula == 'dir2mcp-full'
         run: |
-          # Actually run docling (imports rtree/libspatialindex etc.), not just
-          # check the file exists, so an ABI/linkage-broken venv fails CI. The
-          # Linux post_install rpath fix (homebrew-tap#22) is what makes this pass.
-          "$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling --version
+          # --version imports rtree/libspatialindex/torch/transformers/cv2
+          # (catches ABI/linkage breaks; the Linux post_install rpath fix,
+          # homebrew-tap#22, is what makes the import pass) but never loads the
+          # layout model. Convert a tiny fixture PDF too so an out-of-date
+          # transformers (rt_detr_v2) or empty-output break fails CI (dirstral/dir2mcp#372).
+          DOCLING="$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling
+          "$DOCLING" --version
+          out="$(mktemp -d)"
+          "$DOCLING" --to json --output "$out" .github/fixtures/smoke.pdf
+          json="$(find "$out" -name '*.json' -type f | head -1)"
+          if [ -z "$json" ] || [ ! -s "$json" ]; then
+            echo "::error::docling produced no/empty output for smoke.pdf"; exit 1
+          fi
+          echo "docling conversion smoke OK ($(wc -c < "$json") bytes)"

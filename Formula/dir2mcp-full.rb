@@ -6,12 +6,6 @@ class Dir2mcpFull < Formula
   homepage "https://github.com/dirstral/dir2mcp"
   version "0.9.5"
   license "MIT"
-  # Formula-only rebuild (no upstream version change): bumps the docling venv's
-  # transformers 4.46.3 -> 4.49.0 so docling's rt_detr_v2 layout model loads.
-  # 4.46.3 crashed on every PDF ("model type `rt_detr_v2` … Transformers … out
-  # of date"), so docling produced nothing and the index never embedded. See
-  # dirstral/dir2mcp#371.
-  revision 1
 
   depends_on "rust" => :build
   depends_on "python@3.12"

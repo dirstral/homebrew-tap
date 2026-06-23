@@ -159,9 +159,8 @@ jobs:
           DOCLING="$(brew --prefix)"/opt/dir2mcp-full/libexec/docling-venv/bin/docling
           "$DOCLING" --version
           out="$(mktemp -d)"
-          # --device cpu: GitHub's headless macOS runners expose no usable GPU,
-          # so torch's default MPS (Metal) backend reports 0 bytes and OOMs;
-          # force CPU for the smoke. Real Macs keep the runtime default (auto).
+          # --device cpu: this Linux runner has no GPU, so pin docling to CPU for
+          # a deterministic smoke. Real deployments keep the runtime default (auto).
           "$DOCLING" --to json --device cpu --output "$out" .github/fixtures/smoke.pdf
           json="$(find "$out" -name '*.json' -type f | head -1)"
           if [ -z "$json" ] || [ ! -s "$json" ]; then

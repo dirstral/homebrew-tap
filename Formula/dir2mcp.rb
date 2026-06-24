@@ -5,21 +5,21 @@
 class Dir2mcp < Formula
   desc "Deploy any local directory as an MCP knowledge server with indexing, retrieval, and citations."
   homepage "https://github.com/dirstral/dir2mcp"
-  version "0.9.7"
+  version "0.9.8"
   license "MIT"
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.9.7/dir2mcp_0.9.7_darwin_amd64.tar.gz"
-      sha256 "bd98f35e5744aa7b3b827b7737bbf11da55c7a2d92e80ae9a0d947553113224a"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.9.8/dir2mcp_0.9.8_darwin_amd64.tar.gz"
+      sha256 "8f5b47794ac4160bd37896eaf259a4de9cb9ba96a2465ce9bd958de721402b5a"
 
       define_method(:install) do
         bin.install "dir2mcp"
       end
     end
     if Hardware::CPU.arm?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.9.7/dir2mcp_0.9.7_darwin_arm64.tar.gz"
-      sha256 "3ecf284b69e594882ee8f1930ae903178f7b9aa1de8dc1a5368f2a360628e4a1"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.9.8/dir2mcp_0.9.8_darwin_arm64.tar.gz"
+      sha256 "f6f1e40ce4e3772c1c4489e783be5413776498804e7955d9701d7b616df61c80"
 
       define_method(:install) do
         bin.install "dir2mcp"
@@ -29,15 +29,15 @@ class Dir2mcp < Formula
 
   on_linux do
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.9.7/dir2mcp_0.9.7_linux_amd64.tar.gz"
-      sha256 "42723e64b4a3ee3c592ce985f81c8ed29bf1e24b6ad43d7f7c17ca10bef375da"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.9.8/dir2mcp_0.9.8_linux_amd64.tar.gz"
+      sha256 "4c7e59155d8bcc5bb76903c718e4ee109c816c8583a1422b65791f45e9fa419d"
       define_method(:install) do
         bin.install "dir2mcp"
       end
     end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.9.7/dir2mcp_0.9.7_linux_arm64.tar.gz"
-      sha256 "064cfed49a220e4110cc20313e5412c0face5c5cfcd152ca614caf03fb81a9cf"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.9.8/dir2mcp_0.9.8_linux_arm64.tar.gz"
+      sha256 "4b6ee1b38dc96f1bb543fa21de8ceb8a2d6012116e671dd92401e5bc8c1f857c"
       define_method(:install) do
         bin.install "dir2mcp"
       end

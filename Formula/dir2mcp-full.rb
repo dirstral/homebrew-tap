@@ -225,7 +225,18 @@ class Dir2mcpFull < Formula
   # `dir2mcp` per shell session, so an already-open terminal can keep
   # running the previous binary after `brew upgrade dir2mcp-full` until
   # the cache is cleared.
-  def post_install_steps
+  # Do NOT rename this method. Homebrew dispatches the hook by name, so
+  # `def post_install_steps` defines a method nothing calls: the repair below
+  # is skipped, `brew install` still reports success, and docling dies at
+  # import with "Could not load libspatialindex_c library".
+  #
+  # `post_install` is deprecated in favour of the declarative
+  # `post_install_steps` DSL, which supports file operations only (mkdir_p,
+  # inreplace, write, ...). Both branches below rewrite binary load commands
+  # (Mach-O dylib IDs and rpaths on macOS, ELF rpaths plus a
+  # libspatialindex_c symlink on Linux), so they cannot migrate. The audit
+  # job carries the matching exemption.
+  def post_install
     if OS.mac?
       repair_macos_torch_linkage!
     elsif OS.linux?

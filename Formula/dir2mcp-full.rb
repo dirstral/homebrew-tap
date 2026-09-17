@@ -4,7 +4,6 @@
 class Dir2mcpFull < Formula
   desc "Deploy local directories as an MCP server with bundled Docling runtime"
   homepage "https://github.com/dirstral/dir2mcp"
-  version "0.10.0"
   license "MIT"
 
   depends_on "rust" => :build
@@ -226,7 +225,7 @@ class Dir2mcpFull < Formula
   # `dir2mcp` per shell session, so an already-open terminal can keep
   # running the previous binary after `brew upgrade dir2mcp-full` until
   # the cache is cleared.
-  def post_install
+  def post_install_steps
     if OS.mac?
       repair_macos_torch_linkage!
     elsif OS.linux?

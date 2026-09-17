@@ -4,7 +4,6 @@
 class Dir2mcpFull < Formula
   desc "Deploy local directories as an MCP server with bundled Docling runtime"
   homepage "https://github.com/dirstral/dir2mcp"
-  version "0.9.9"
   license "MIT"
 
   depends_on "rust" => :build
@@ -176,8 +175,8 @@ class Dir2mcpFull < Formula
     depends_on "theora"
 
     if Hardware::CPU.intel?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.9.9/dir2mcp_0.9.9_darwin_amd64.tar.gz"
-      sha256 "41cac5c331694cad9bb71ae375bb6f77bfdf0b3480664bbbb337553a14ad6e26"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.10.0/dir2mcp_0.10.0_darwin_amd64.tar.gz"
+      sha256 "896823cd4f5c0c364b25bf8cd4a774b4d9530763ac642fee94980792ac1fb2d6"
 
       define_method(:install) do
         libexec.install "dir2mcp"
@@ -185,8 +184,8 @@ class Dir2mcpFull < Formula
       end
     end
     if Hardware::CPU.arm?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.9.9/dir2mcp_0.9.9_darwin_arm64.tar.gz"
-      sha256 "22266feda154db84951d7afce8662e8cd979f8bc593f7f665e4f5a74200d6906"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.10.0/dir2mcp_0.10.0_darwin_arm64.tar.gz"
+      sha256 "45e54005e7220b12c2112365a00c38d5d5b0b8d8ba8aa006824b4f6d63e1a0a9"
 
       define_method(:install) do
         libexec.install "dir2mcp"
@@ -203,16 +202,16 @@ class Dir2mcpFull < Formula
     depends_on "spatialindex"
 
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.9.9/dir2mcp_0.9.9_linux_amd64.tar.gz"
-      sha256 "d5da3adad591f4fd85f8dc01971575f32db580d0803db1b884b98bf4bc487689"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.10.0/dir2mcp_0.10.0_linux_amd64.tar.gz"
+      sha256 "eb81916cc1cb4552935e4dfa002f1340e15d45006f175ff185f8bb5132c44749"
       define_method(:install) do
         libexec.install "dir2mcp"
         install_docling_runtime
       end
     end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.9.9/dir2mcp_0.9.9_linux_arm64.tar.gz"
-      sha256 "ad16ae23402f0a0e5958bcd58535b5c9c0ed9488cc42560fadeedebe9e65b2c8"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.10.0/dir2mcp_0.10.0_linux_arm64.tar.gz"
+      sha256 "4082c05f56fd302bed8c8f85de2c517f6049c3c9807127e457f8bf513f1d06ed"
       define_method(:install) do
         libexec.install "dir2mcp"
         install_docling_runtime
@@ -226,6 +225,17 @@ class Dir2mcpFull < Formula
   # `dir2mcp` per shell session, so an already-open terminal can keep
   # running the previous binary after `brew upgrade dir2mcp-full` until
   # the cache is cleared.
+  # Do NOT rename this method. Homebrew dispatches the hook by name, so
+  # `def post_install_steps` defines a method nothing calls: the repair below
+  # is skipped, `brew install` still reports success, and docling dies at
+  # import with "Could not load libspatialindex_c library".
+  #
+  # `post_install` is deprecated in favour of the declarative
+  # `post_install_steps` DSL, which supports file operations only (mkdir_p,
+  # inreplace, write, ...). Both branches below rewrite binary load commands
+  # (Mach-O dylib IDs and rpaths on macOS, ELF rpaths plus a
+  # libspatialindex_c symlink on Linux), so they cannot migrate. The audit
+  # job carries the matching exemption.
   def post_install
     if OS.mac?
       repair_macos_torch_linkage!

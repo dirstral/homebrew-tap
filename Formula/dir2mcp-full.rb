@@ -335,11 +335,11 @@ class Dir2mcpFull < Formula
     # against `/usr/lib/libexpat.1.dylib`, whose symbol set is too old for the
     # shipped extension module. Build the venv without pip first, add a
     # venv-local pyexpat shim if needed, then run ensurepip inside the venv.
-    system python, "-m", "venv", "--without-pip", venv_dir
+    system python.to_s, "-m", "venv", "--without-pip", venv_dir.to_s
     install_venv_pyexpat_shim!(python, venv_dir) if OS.mac?
     venv_python = venv_dir/"bin/python"
-    system venv_python, "-m", "ensurepip", "--upgrade", "--default-pip"
-    system venv_python, "-m", "pip", "install", DOCLING_PIP_REQUIREMENT
+    system venv_python.to_s, "-m", "ensurepip", "--upgrade", "--default-pip"
+    system venv_python.to_s, "-m", "pip", "install", DOCLING_PIP_REQUIREMENT
     # Install the fully pinned tree from the embedded lock so the resolved
     # versions never drift between installs.
     lock_file = buildpath/"docling-lock.txt"
@@ -367,12 +367,12 @@ class Dir2mcpFull < Formula
         # build stays reproducible.
         build_constraints = buildpath/"docling-build-constraints.txt"
         build_constraints.write(DOCLING_BUILD_CONSTRAINTS)
-        system venv_python, "-m", "pip", "install",
-               "--build-constraint", build_constraints,
-               "--requirement", lock_file
+        system venv_python.to_s, "-m", "pip", "install",
+               "--build-constraint", build_constraints.to_s,
+               "--requirement", lock_file.to_s
       else
-        system venv_python, "-m", "pip", "install",
-               "--requirement", lock_file
+        system venv_python.to_s, "-m", "pip", "install",
+               "--requirement", lock_file.to_s
       end
     end
 

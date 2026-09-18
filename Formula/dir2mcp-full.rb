@@ -225,85 +225,95 @@ class Dir2mcpFull < Formula
   # `dir2mcp` per shell session, so an already-open terminal can keep
   # running the previous binary after `brew upgrade dir2mcp-full` until
   # the cache is cleared.
-  # Do NOT rename this method. Homebrew dispatches the hook by name, so
-  # `def post_install_steps` defines a method nothing calls: the repair below
-  # is skipped, `brew install` still reports success, and docling dies at
-  # import with "Could not load libspatialindex_c library".
+  # The repair below MUST run here and nowhere else.
   #
-  # `post_install` is deprecated in favour of the declarative
-  # `post_install_steps` DSL, which supports file operations only (mkdir_p,
-  # inreplace, write, ...). Both branches below rewrite binary load commands
-  # (Mach-O dylib IDs and rpaths on macOS, ELF rpaths plus a
-  # libspatialindex_c symlink on Linux), so they cannot migrate. The audit
-  # job carries the matching exemption.
-  def post_install
-    if OS.mac?
-      repair_macos_torch_linkage!
-    elsif OS.linux?
-      repair_linux_native_libs!
-    end
+  # FormulaInstaller runs fix_dynamic_linkage(keg) AFTER `install` returns and
+  # BEFORE this hook (formula_installer.rb:1017), and for a source build it
+  # always runs. It rewrites the prebuilt torch dylib IDs to absolute Cellar
+  # paths and strips @loader_path, so anything `install` sets is undone.
+  #
+  # The work is a shell script rather than steps because the declarative DSL
+  # cannot express it: it has no add_rpath step, change_dylib_id takes one
+  # path with no glob, and the dylib set does not exist until install runs and
+  # changes with every torch version. `run` is the DSL's own escape hatch.
+  post_install_steps do
+    run "repair-native-libs.sh", base: :libexec
   end
 
-  # macOS: keg relocation rewrites the prebuilt torch dylibs' IDs from
+  # Write the repair script post_install_steps runs.
+  #
+  # The dependency paths are baked in here, at install time, because the script
+  # runs from a declarative step that cannot call formula methods.
+  #
+  # Two Linux problems it fixes (homebrew-tap#22):
+  #  1. The rtree wheel ships only the C++ core (`rtree.libs/libspatialindex-*.so`)
+  #     and no `libspatialindex_c.so`, the C-API library rtree's finder actually
+  #     dlopens, so docling dies with "Could not load libspatialindex_c library".
+  #     Symlink the keg's copy into `rtree/lib`, which that finder searches.
+  #  2. Keg relocation can strip the `$ORIGIN` rpath from auditwheel-vendored
+  #     libs, so a bundled lib cannot find its sibling. Re-assert it.
+  #
+  # And on macOS: relocation rewrites the prebuilt torch dylib IDs from
   # `@rpath/<name>` to absolute Cellar paths and strips `@loader_path`, so
-  # torchvision loads a second libtorch and its ops never register
-  # ("operator torchvision::nms does not exist"). Restore `@rpath` IDs + the
-  # `@loader_path` rpath after relocation, then re-sign.
-  def repair_macos_torch_linkage!
-    torch_lib = libexec/"docling-venv/lib/python3.12/site-packages/torch/lib"
-    return unless torch_lib.directory?
-
-    Pathname.glob(torch_lib/"*.dylib").each do |dylib|
-      base = dylib.basename.to_s
-      rpath_id = "@rpath/#{base}"
-      if Utils.safe_popen_read("otool", "-D", dylib).lines[1]&.strip != rpath_id
-        MachO::Tools.change_dylib_id(dylib.to_s, rpath_id)
-      end
-      unless Utils.safe_popen_read("otool", "-l", dylib).include?(" path @loader_path ")
-        MachO::Tools.add_rpath(dylib.to_s, "@loader_path")
-      end
-      system "codesign", "--force", "--sign", "-", dylib
+  # torchvision loads a second libtorch and its ops never register ("operator
+  # torchvision::nms does not exist"). Restore the `@rpath` IDs and the
+  # `@loader_path` rpath, then re-sign.
+  def install_repair_script!
+    # Hoisted out of the heredoc: the cop forbids a ternary that can yield an
+    # empty string inside an interpolation, and these are only meaningful on
+    # Linux. On macOS the repair_linux branch never runs.
+    spatialindex_c = if OS.mac?
+      "/nonexistent"
+    else
+      (formula_opt_lib("spatialindex")/shared_library("libspatialindex_c")).to_s
     end
-  end
+    patchelf_bin = OS.mac? ? "true" : (formula_opt_bin("patchelf")/"patchelf").to_s
 
-  # Linux docling repair (homebrew-tap#22). Two distinct problems:
-  #
-  # 1. The rtree wheel ships only the C++ core (`rtree.libs/libspatialindex-*.so`)
-  #    — there is no `libspatialindex_c.so`, the C-API library rtree's finder
-  #    actually dlopens — so docling crashes with "Could not load libspatialindex_c
-  #    library". Provide it from the `libspatialindex` formula by symlinking into
-  #    `rtree/lib`, which rtree's finder searches.
-  # 2. Keg relocation can strip the `$ORIGIN` rpath from auditwheel-vendored libs
-  #    so a bundled lib can't find its sibling; re-assert `$ORIGIN` defensively.
-  def repair_linux_native_libs!
-    site = libexec/"docling-venv/lib/python3.12/site-packages"
-    return unless site.directory?
+    script = libexec/"repair-native-libs.sh"
+    script.write <<~SH
+      #!/bin/bash
+      # Generated by the dir2mcp-full formula. Run from post_install_steps,
+      # the only hook that fires after Homebrew's fix_dynamic_linkage().
+      set -euo pipefail
 
-    provide_libspatialindex_c!(site)
+      SITE="#{libexec}/docling-venv/lib/python3.12/site-packages"
 
-    patchelf = formula_opt_bin("patchelf")/"patchelf"
+      repair_macos() {
+        torch_lib="$SITE/torch/lib"
+        [ -d "$torch_lib" ] || return 0
+        for dylib in "$torch_lib"/*.dylib; do
+          [ -e "$dylib" ] || continue
+          base=$(basename "$dylib")
+          want="@rpath/$base"
+          if [ "$(otool -D "$dylib" | awk 'NR==2{$1=$1;print}')" != "$want" ]; then
+            install_name_tool -id "$want" "$dylib"
+          fi
+          if ! otool -l "$dylib" | grep -q ' path @loader_path '; then
+            install_name_tool -add_rpath "@loader_path" "$dylib"
+          fi
+          codesign --force --sign - "$dylib"
+        done
+      }
 
-    Pathname.glob(site/"*.libs/*.so*").each do |so|
-      system patchelf, "--set-rpath", "$ORIGIN", so.to_s
-    end
-  end
+      repair_linux() {
+        [ -d "$SITE" ] || return 0
+        src="#{spatialindex_c}"
+        if [ -d "$SITE/rtree" ] && [ -e "$src" ]; then
+          mkdir -p "$SITE/rtree/lib"
+          ln -sfn "$src" "$SITE/rtree/lib/libspatialindex_c.so"
+        fi
+        for so in "$SITE"/*.libs/*.so*; do
+          [ -e "$so" ] || continue
+          "#{patchelf_bin}" --set-rpath '$ORIGIN' "$so"
+        done
+      }
 
-  # Symlink the libspatialindex C-API library into rtree/lib so rtree's finder
-  # (which looks for `libspatialindex_c.so` in `rtree/lib`, `rtree/`, and
-  # $SPATIALINDEX_C_LIBRARY) can load it. The keg-provided lib carries its own
-  # rpath to its sibling libspatialindex, so ctypes resolves the dependency.
-  def provide_libspatialindex_c!(site)
-    rtree_lib = site/"rtree/lib"
-    return unless (site/"rtree").directory?
-
-    src = formula_opt_lib("spatialindex")/shared_library("libspatialindex_c")
-
-    return unless src.exist?
-
-    rtree_lib.mkpath
-    target = rtree_lib/"libspatialindex_c.so"
-    target.unlink if target.exist? || target.symlink?
-    target.make_symlink(src)
+      case "$(uname -s)" in
+        Darwin) repair_macos ;;
+        Linux)  repair_linux ;;
+      esac
+    SH
+    script.chmod 0755
   end
 
   def caveats
@@ -364,22 +374,9 @@ class Dir2mcpFull < Formula
     real_bin = libexec/"dir2mcp"
     (bin/"dir2mcp").write_env_script real_bin, DIR2MCP_DOCLING_COMMAND: docling_bin
     (bin/"dir2mcp-full").write_env_script real_bin, DIR2MCP_DOCLING_COMMAND: docling_bin
-  end
 
-  # Restore the torch dylibs' self-references AFTER Homebrew's relocation.
-  #
-  # The prebuilt torch wheel ships its dylibs with ID `@rpath/<name>` and an
-  # `LC_RPATH @loader_path`, and torchvision's `_C.so` references libtorch via
-  # `@rpath/...`. Homebrew's keg relocation rewrites those IDs to absolute Cellar
-  # paths and strips `@loader_path`, so the libtorch loaded by `import torch`
-  # registers under its absolute name while torchvision still asks for
-  # `@rpath/libtorch*` — dyld then loads a second libtorch and torchvision's ops
-  # never register ("operator torchvision::nms does not exist") at docling import.
-  #
-  # This must run in post_install: relocation happens AFTER the install method
-  # returns, so an install-time fix is undone (the bug the earlier
-  # fix_torch_macos_rpath! couldn't beat). Here we re-assert `@rpath` IDs and the
-  # `@loader_path` rpath, matching the working pip layout, then re-sign.
+    install_repair_script!
+  end
 
   private
 

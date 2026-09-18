@@ -76,7 +76,16 @@ jobs:
             formula: dir2mcp
           - os: macos-14
             formula: dir2mcp
-          - os: macos-14
+          # Sequoia, not Sonoma, for the full formula only. dir2mcp-full
+          # build-depends on rust, rust runtime-depends on llvm@22, and
+          # llvm@22 has no arm64_sonoma bottle, so macos-14 compiled LLVM
+          # from source on every run: 1h53m, against 29s for the lean
+          # formula next to it (homebrew-tap#47). arm64_sequoia is bottled.
+          #
+          # The lean job above stays on macos-14 deliberately. It has no
+          # dependencies at all, so Sonoma coverage costs 29 seconds and is
+          # worth keeping.
+          - os: macos-15
             formula: dir2mcp-full
     runs-on: ${{ matrix.os }}
     steps:

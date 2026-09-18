@@ -6,7 +6,14 @@ Homebrew tap for [dir2mcp](https://github.com/Dirstral/dir2mcp) — index any lo
 
 ```sh
 brew tap Dirstral/tap
+brew trust dirstral/tap
 ```
+
+The `brew trust` step is required. Homebrew 6 and later refuse to load formulae
+from an untrusted third-party tap, and `brew install dirstral/tap/dir2mcp` reads
+the sibling `dir2mcp-full` formula while resolving, so **the lean install fails
+too** without it (#42). Older Homebrew has no `trust` subcommand and needs
+nothing here.
 
 Install the MCP server (lean binary):
 
@@ -20,7 +27,30 @@ Install the full runtime with bundled Docling dependencies:
 brew install dir2mcp-full
 ```
 
-`dir2mcp` and `dir2mcp-full` conflict in Homebrew and cannot be installed at the same time.
+### Choosing a track
+
+`dir2mcp` and `dir2mcp-full` both provide the `dir2mcp` command, so they conflict
+and cannot be linked at the same time. Installing one over the other fails until
+the first is unlinked (#43):
+
+```sh
+brew unlink dir2mcp && brew install dir2mcp-full   # lean  -> full
+brew unlink dir2mcp-full && brew install dir2mcp   # full  -> lean
+```
+
+`brew unlink` keeps the other version on disk, so switching back is fast. Use
+`brew uninstall` instead if you want the space returned.
+
+**The full track is large** (#45). Measured on the released 0.10.0:
+
+| Platform | Installed size | Files | Install time |
+| --- | --- | --- | --- |
+| macOS 26 arm64 | 1.1 GB | 38,718 | ~4m30s |
+| Linux x86_64 | 6.3 GB | 39,137 | ~3m20s |
+
+Both numbers are the same tree; Linux carries much larger native wheels. The
+bulk is an isolated Python 3.12 environment with docling, torch, torchvision,
+scipy and shapely. Choose the lean track unless you need document extraction.
 
 Install the interactive TUI client:
 

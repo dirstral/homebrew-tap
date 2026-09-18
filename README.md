@@ -58,6 +58,35 @@ Install the interactive TUI client:
 brew install dirstral
 ```
 
+### The Linux sandbox warning
+
+Installing on Linux may print:
+
+```
+Warning: Sandbox unavailable: building without sandboxing!
+```
+
+This is a property of the host, not of these formulae, and the install is
+otherwise unaffected (#44). Homebrew's Linux build sandbox runs through rootless
+Bubblewrap, which needs unprivileged user namespaces. Several distributions
+restrict those by default, so the sandbox cannot start even with `bubblewrap`
+installed. Our own CI hits the same limit on GitHub-hosted runners and sets
+`HOMEBREW_NO_SANDBOX_LINUX=1` for that reason.
+
+To see whether your host allows them:
+
+```sh
+sysctl kernel.unprivileged_userns_clone 2>/dev/null
+sysctl kernel.apparmor_restrict_unprivileged_userns 2>/dev/null
+unshare --user --map-root-user true && echo "user namespaces work"
+```
+
+The last command is the one that matters: if it fails, Bubblewrap cannot start
+and the warning is expected. Whether to relax that restriction is a decision
+about your host's security posture, so we do not recommend a setting here. To
+silence the warning without changing anything, set `HOMEBREW_NO_SANDBOX_LINUX=1`
+and accept that the build is unsandboxed either way.
+
 ## Upgrade
 
 ```sh

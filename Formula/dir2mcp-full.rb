@@ -336,20 +336,28 @@ class Dir2mcpFull < Formula
     lock_file.write(DOCLING_LOCK)
     with_env(PIP_DISABLE_PIP_VERSION_CHECK: "1") do
       if OS.mac? && Hardware::CPU.arm?
-        # ARM macOS prebuilt wheels for pydantic-core/rpds-py ship with
-        # insufficient Mach-O headerpad, so brew's install_name_tool
-        # rewrite fails ("Updated load commands do not fit in the
-        # header"). Force a source build for these two packages so the
-        # resulting .so has enough headerpad. This is the reason the
-        # `rust` build dep is still required on this arch.
+        # This arch once forced a source build of pydantic-core and rpds-py,
+        # because the prebuilt ARM macOS wheels shipped with insufficient
+        # Mach-O headerpad and brew's install_name_tool rewrite failed with
+        # "Updated load commands do not fit in the header".
         #
-        # The forced source builds run in PEP 517 isolation, whose build
-        # backend (maturin) isn't covered by the runtime lock; pin it via
-        # --build-constraint so the build is reproducible too.
+        # That trade has inverted. On macOS 27 the SOURCE build is the thing
+        # that breaks: the resulting .so carries a mis-aligned LINKEDIT string
+        # pool after relocation and ad-hoc signing, dyld refuses to load it,
+        # and every docling entry point dies at `import pydantic`
+        # (homebrew-tap#51). The prebuilt wheels install and load cleanly.
+        #
+        # Measured on macOS 27.0 arm64: with the wheels the headerpad failure
+        # did not recur, docling --version reports, and the CI fixture
+        # converts to 32166 bytes, the same byte count the macos-15 runner
+        # produces.
+        #
+        # --build-constraint stays: it pins the PEP 517 build backend for any
+        # package that still falls back to a source build, so an incidental
+        # build stays reproducible.
         build_constraints = buildpath/"docling-build-constraints.txt"
         build_constraints.write(DOCLING_BUILD_CONSTRAINTS)
         system venv_python, "-m", "pip", "install",
-               "--no-binary", "pydantic-core,rpds-py",
                "--build-constraint", build_constraints,
                "--requirement", lock_file
       else

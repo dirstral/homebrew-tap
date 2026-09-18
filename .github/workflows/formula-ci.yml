@@ -42,30 +42,7 @@ jobs:
 
       - name: Audit formula
         run: |
-          # `post_install` is deprecated in favour of the declarative
-          # `post_install_steps` DSL. That DSL supports file operations only
-          # (mkdir_p, inreplace, write, ...), while this formula's hook
-          # rewrites Mach-O dylib IDs and ELF rpaths and symlinks
-          # libspatialindex_c (homebrew-tap#22). Renaming the method to
-          # satisfy the cop silently disables the hook, because Homebrew
-          # dispatches on the name, and docling then fails to import rtree.
-          # Homebrew forbids inline rubocop directives in formulae and refuses
-          # --except-cops together with --strict, so run the full strict audit
-          # and drop only this one known offense.
-          known='Formulae must use `post_install_steps` instead of `post_install`.'
-          out="$(brew audit --strict dirstral/tap/dir2mcp-full 2>&1)" || true
-          printf '%s\n' "$out"
-          if ! printf '%s\n' "$out" | grep -qF "$known"; then
-            echo "::error::the known post_install deprecation is gone; drop this exemption and restore a plain 'brew audit --strict'"
-            exit 1
-          fi
-          others="$(printf '%s\n' "$out" | grep -E '^ *\* ' | grep -vF "$known" || true)"
-          if [ -n "$others" ]; then
-            echo "::error::brew audit reported offenses beyond the known deprecation:"
-            printf '%s\n' "$others"
-            exit 1
-          fi
-          echo "audit OK: only the known post_install deprecation remains"
+          brew audit --strict dirstral/tap/dir2mcp-full
 
   install-macos:
     strategy:

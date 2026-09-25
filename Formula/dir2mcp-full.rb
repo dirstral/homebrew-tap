@@ -175,8 +175,8 @@ class Dir2mcpFull < Formula
     depends_on "theora"
 
     if Hardware::CPU.intel?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.11.1/dir2mcp_0.11.1_darwin_amd64.tar.gz"
-      sha256 "3044df7dff4de16b9d616d14d00d756594abf2abc03c080b80ea558dd0802fcf"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.11.2/dir2mcp_0.11.2_darwin_amd64.tar.gz"
+      sha256 "917c07cf6bf7b1fb0a9e7c89629f0020feb752fa74ec90239aacd0e75393746b"
 
       define_method(:install) do
         libexec.install "dir2mcp"
@@ -184,8 +184,8 @@ class Dir2mcpFull < Formula
       end
     end
     if Hardware::CPU.arm?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.11.1/dir2mcp_0.11.1_darwin_arm64.tar.gz"
-      sha256 "5034558f07d46476c374445614769f47ddf061658c8d30986b7490ca2ccbbed6"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.11.2/dir2mcp_0.11.2_darwin_arm64.tar.gz"
+      sha256 "6dba1980413056dd94b3b65363d993e63cd0beda3b5f365331107391c8fb58f2"
 
       define_method(:install) do
         libexec.install "dir2mcp"
@@ -202,16 +202,16 @@ class Dir2mcpFull < Formula
     depends_on "spatialindex"
 
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.11.1/dir2mcp_0.11.1_linux_amd64.tar.gz"
-      sha256 "162e461404827600e30a93898b4b9aa762bae3a9374df9b4b86cb95b7d83e749"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.11.2/dir2mcp_0.11.2_linux_amd64.tar.gz"
+      sha256 "bf8ed09f25caf660b58ed885c9a854f8040e570f9758489c596cab79094b7303"
       define_method(:install) do
         libexec.install "dir2mcp"
         install_docling_runtime
       end
     end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/dirstral/dir2mcp/releases/download/v0.11.1/dir2mcp_0.11.1_linux_arm64.tar.gz"
-      sha256 "43c4dc79b6ccd79f4c2331bc287e33cc89d7bd13a824870e38664f641d9859e4"
+      url "https://github.com/dirstral/dir2mcp/releases/download/v0.11.2/dir2mcp_0.11.2_linux_arm64.tar.gz"
+      sha256 "c6d6fa63bc93579db5af1e52de7eb97551e6fa25c24cce02fa32078999224866"
       define_method(:install) do
         libexec.install "dir2mcp"
         install_docling_runtime

@@ -99,9 +99,13 @@ jobs:
           # /opt/homebrew/bin/openssl. Our python@3.12 dependency pulls
           # openssl@3, and `brew install` stops at its link step ("Could not
           # symlink bin/openssl ... belonging to openssl@1.1") before it ever
-          # reaches the formula (bump PR #58, twice). Unlink the old keg first;
-          # an image without it makes this a no-op.
+          # reaches the formula (bump PR #58, three times). `brew unlink
+          # openssl@1.1` removes nothing there (the symlink is not recorded
+          # against that keg), so take Homebrew's own advice and force-link the
+          # openssl@3 keg the image already holds over the conflicting files.
+          # An image without the conflict makes both lines a no-op.
           brew unlink openssl@1.1 2>/dev/null || true
+          brew link --overwrite openssl@3 2>/dev/null || true
           brew install --formula "dirstral/tap/${{ matrix.formula }}"
 
       - name: Smoke version

@@ -95,6 +95,19 @@ jobs:
 
       - name: Install formula
         run: |
+          # The macos-15 image ships a stray symlink
+          # /opt/homebrew/bin/openssl -> /opt/homebrew/opt/openssl@1.1/bin/openssl
+          # that no keg records: `brew unlink openssl@1.1` removes nothing, and
+          # `brew link --overwrite openssl@3` has no keg to link yet. Our
+          # python@3.12 dependency pulls openssl@3, and `brew install` stopped
+          # at its link step on that one file before it reached the formula
+          # (bump PR #58, four runs). Remove exactly that symlink when it
+          # points into openssl@1.1; any other image makes this a no-op.
+          if [ -L /opt/homebrew/bin/openssl ]; then
+            case "$(readlink /opt/homebrew/bin/openssl)" in
+              *openssl@1.1*) rm -f /opt/homebrew/bin/openssl ;;
+            esac
+          fi
           brew install --formula "dirstral/tap/${{ matrix.formula }}"
 
       - name: Smoke version

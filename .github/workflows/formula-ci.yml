@@ -95,6 +95,13 @@ jobs:
 
       - name: Install formula
         run: |
+          # The macos-15 image links the retired openssl@1.1 at
+          # /opt/homebrew/bin/openssl. Our python@3.12 dependency pulls
+          # openssl@3, and `brew install` stops at its link step ("Could not
+          # symlink bin/openssl ... belonging to openssl@1.1") before it ever
+          # reaches the formula (bump PR #58, twice). Unlink the old keg first;
+          # an image without it makes this a no-op.
+          brew unlink openssl@1.1 2>/dev/null || true
           brew install --formula "dirstral/tap/${{ matrix.formula }}"
 
       - name: Smoke version
